@@ -1,10 +1,3 @@
-<!-- 
-GITHUB_AI_SUMMARY:
-- FIX: Adicionado tratamento de erro global para capturar falhas de script (Script Error).
-- FEAT: Inclusão de bloco de versionamento no cabeçalho para facilitar commits automáticos.
-- REFACTOR: Inicialização do Firebase Auth blindada contra falhas de carregamento de CDN.
-- UI: Ajustes de resiliência na interface de Login.
--->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -12,19 +5,6 @@ GITHUB_AI_SUMMARY:
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Moka Clube App</title>
     
-    <!-- Tratamento de Erros de Script Global -->
-    <script>
-        window.onerror = function(message, source, lineno, colno, error) {
-            console.error("Erro Global Capturado:", message, source, lineno);
-            // Ignora erros de redimensionamento comuns em iframes de teste
-            if (message && message.indexOf('ResizeObserver') !== -1) return;
-            // Se for o erro genérico de script, tenta dar uma dica
-            if (message === 'Script error.') {
-                console.warn("Erro de Script detectado. Verifique se os bloqueadores de anúncio não estão bloqueando o Firebase.");
-            }
-        };
-    </script>
-
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -41,8 +21,7 @@ GITHUB_AI_SUMMARY:
                 'text-white', 'text-zinc-400', 'text-zinc-500', 'text-zinc-300',
                 'bg-yellow-500', 'text-yellow-500', 'border-yellow-500', 'bg-yellow-400', 'text-yellow-400',
                 'border-zinc-700', 'border-zinc-800',
-                'fill-current', 'animate-pulse', 'border-current',
-                'bg-red-600', 'text-red-600'
+                'fill-current', 'animate-pulse', 'border-current'
             ],
             theme: {
                 extend: {
@@ -56,7 +35,6 @@ GITHUB_AI_SUMMARY:
 
     <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <style>
@@ -75,7 +53,7 @@ GITHUB_AI_SUMMARY:
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- FIREBASE SETUP ---
+        // --- FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyDnElIN9JV7OtApqh4orYVXjdpr41jtyHc",
             authDomain: "moka-clube-app.firebaseapp.com",
@@ -85,19 +63,8 @@ GITHUB_AI_SUMMARY:
             appId: "1:921502412834:web:f72730a5f7444cb440da7b"
         };
 
-        let db, auth;
-        try {
-            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            // Verifica se o módulo de Auth foi carregado corretamente
-            if (firebase.auth) {
-                auth = firebase.auth();
-            } else {
-                console.error("Módulo Firebase Auth não carregado. Verifique sua conexão.");
-            }
-        } catch (error) {
-            console.error("Erro ao inicializar Firebase:", error);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
         // --- TEMA ÚNICO ---
         const THEME = {
@@ -146,13 +113,7 @@ GITHUB_AI_SUMMARY:
             'triangle': <path d="M13.73 21a2 2 0 0 1-3.46 0l-8-14A2 2 0 0 1 4 4h16a2 2 0 0 1 1.73 3l-8 14z" />,
             'trash': <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>,
             'edit': <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />,
-            'send': <><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></>,
-            'log-out': <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" />,
-            'mail': <rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />,
-            'lock': <rect width="18" height="11" x="3" y="11" rx="2" y="11" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />,
-            'user': <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />,
-            'calendar': <rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" />,
-            'phone': <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+            'send': <><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></>
         };
 
         const Icon = ({ name, size = 24, className, fill = "none", ...props }) => {
@@ -202,104 +163,6 @@ GITHUB_AI_SUMMARY:
                 return this.props.children; 
             }
         }
-
-        // --- AUTH VIEW ---
-        const AuthView = ({ onLogin }) => {
-            const [isRegistering, setIsRegistering] = useState(false);
-            const [isLoading, setIsLoading] = useState(false);
-            const [formData, setFormData] = useState({
-                name: '', email: '', password: '', phone: '', birthdate: ''
-            });
-
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setIsLoading(true);
-                try {
-                    if (!auth) throw new Error("Sistema de login não inicializado.");
-                    
-                    if (isRegistering) {
-                        // Register
-                        const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
-                        const user = userCredential.user;
-                        
-                        // Save extra details
-                        await db.collection('users').doc(user.uid).set({
-                            name: formData.name,
-                            email: formData.email,
-                            phone: formData.phone,
-                            birthdate: formData.birthdate,
-                            createdAt: new Date()
-                        });
-                        
-                        // Update Profile Display Name
-                        await user.updateProfile({ displayName: formData.name });
-                    } else {
-                        // Login
-                        await auth.signInWithEmailAndPassword(formData.email, formData.password);
-                    }
-                } catch (error) {
-                    alert("Erro: " + error.message);
-                    setIsLoading(false);
-                }
-            };
-
-            return (
-                <div className="min-h-screen bg-zinc-900 flex flex-col items-center justify-center p-6 text-white">
-                    <div className="w-full max-w-sm">
-                        <div className="text-center mb-8">
-                            <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-yellow-500">
-                                <Icon name="coffee" size={40} className="text-white" />
-                            </div>
-                            <h1 className="text-2xl font-bold tracking-wider">MOKA CLUBE</h1>
-                            <p className="text-zinc-500 text-sm">Entre para a comunidade do café.</p>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {isRegistering && (
-                                <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3">
-                                    <Icon name="user" className="text-zinc-500" />
-                                    <input type="text" placeholder="Nome Completo" className="bg-transparent w-full outline-none text-sm" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
-                                </div>
-                            )}
-                            
-                            <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3">
-                                <Icon name="mail" className="text-zinc-500" />
-                                <input type="email" placeholder="E-mail" className="bg-transparent w-full outline-none text-sm" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
-                            </div>
-
-                            <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3">
-                                <Icon name="lock" className="text-zinc-500" />
-                                <input type="password" placeholder="Senha" className="bg-transparent w-full outline-none text-sm" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required />
-                            </div>
-
-                            {isRegistering && (
-                                <>
-                                    <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3">
-                                        <Icon name="phone" className="text-zinc-500" />
-                                        <input type="tel" placeholder="Celular (DD) 99999-9999" className="bg-transparent w-full outline-none text-sm" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} required />
-                                    </div>
-                                    <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3">
-                                        <Icon name="calendar" className="text-zinc-500" />
-                                        <input type="date" className="bg-transparent w-full outline-none text-sm text-zinc-400" value={formData.birthdate} onChange={e => setFormData({...formData, birthdate: e.target.value})} required />
-                                    </div>
-                                </>
-                            )}
-
-                            <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors flex justify-center">
-                                {isLoading ? <span className="animate-spin mr-2">⏳</span> : (isRegistering ? "Criar Conta" : "Entrar")}
-                            </button>
-                        </form>
-
-                        <div className="mt-6 text-center text-sm">
-                            <button onClick={() => setIsRegistering(!isRegistering)} className="text-zinc-400 hover:text-white underline">
-                                {isRegistering ? "Já tem conta? Faça Login" : "Não tem conta? Cadastre-se"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
 
         // --- DADOS E MÉTODOS ---
         const BREW_METHODS = [
@@ -377,7 +240,7 @@ GITHUB_AI_SUMMARY:
             );
         };
 
-        const ReviewSection = ({ recipeId, user }) => {
+        const ReviewSection = ({ recipeId }) => {
             const [reviews, setReviews] = useState([]);
             const [newRating, setNewRating] = useState(0);
             const [newComment, setNewComment] = useState("");
@@ -399,11 +262,7 @@ GITHUB_AI_SUMMARY:
                 setIsSubmitting(true);
                 try {
                     await db.collection('recipes').doc(recipeId).collection('reviews').add({
-                        author: user.displayName || "Usuário", 
-                        rating: newRating, 
-                        comment: newComment, 
-                        createdAt: new Date(),
-                        userId: user.uid
+                        author: "Você", rating: newRating, comment: newComment, createdAt: new Date()
                     });
                     setNewComment(""); setNewRating(0);
                 } catch (error) { console.error(error); alert("Erro ao enviar review."); } finally { setIsSubmitting(false); }
@@ -436,7 +295,7 @@ GITHUB_AI_SUMMARY:
             );
         };
 
-        const RecipeDetailModal = ({ recipe, onClose, user }) => {
+        const RecipeDetailModal = ({ recipe, onClose }) => {
             if (!recipe) return null;
             return (
                 <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
@@ -471,7 +330,7 @@ GITHUB_AI_SUMMARY:
                                     )) : <p className={`text-sm ${THEME.textSec}`}>Siga o método padrão {recipe.method}.</p>}
                                 </div>
                             </div>
-                            <ReviewSection recipeId={recipe.id} user={user} />
+                            <ReviewSection recipeId={recipe.id} />
                         </div>
                     </div>
                 </div>
@@ -538,7 +397,7 @@ GITHUB_AI_SUMMARY:
             );
         };
 
-        const SensoryEvaluation = ({ onFindRecipes, user }) => {
+        const SensoryEvaluation = ({ onFindRecipes }) => {
             const [view, setView] = useState('list'); // 'list' | 'form'
             const [evaluations, setEvaluations] = useState([]);
             const [formData, setFormData] = useState({ 
@@ -547,16 +406,11 @@ GITHUB_AI_SUMMARY:
             });
 
             useEffect(() => {
-                if (!user) return;
-                // Query filtrando apenas pelo usuário logado
-                const unsub = db.collection('evaluations')
-                    .where('userId', '==', user.uid)
-                    .orderBy('createdAt', 'desc')
-                    .onSnapshot(snap => {
-                        setEvaluations(snap.docs.map(d => ({id: d.id, ...d.data()})));
-                    }, err => console.log("Erro ao carregar avaliações:", err));
+                const unsub = db.collection('evaluations').orderBy('createdAt', 'desc').onSnapshot(snap => {
+                    setEvaluations(snap.docs.map(d => ({id: d.id, ...d.data()})));
+                }, err => console.log(err));
                 return () => unsub();
-            }, [user]);
+            }, []);
 
             const handleEdit = (ev) => {
                 setFormData(ev);
@@ -576,11 +430,7 @@ GITHUB_AI_SUMMARY:
                         });
                     } else {
                         // Create new
-                        await db.collection('evaluations').add({ 
-                            ...formData, 
-                            userId: user.uid, // Salvando com ID do usuário
-                            createdAt: new Date() 
-                        });
+                        await db.collection('evaluations').add({ ...formData, createdAt: new Date() });
                     }
                     
                     setView('list');
@@ -759,54 +609,97 @@ GITHUB_AI_SUMMARY:
             );
         };
 
-        const ProfileView = ({ user, baristaMode, setBaristaMode }) => (
-            <div className="p-4 pb-24">
-                <div className={`${THEME.cardBg} rounded-xl p-6 shadow-sm border ${THEME.border} mb-6 text-center`}>
-                    <div className="w-20 h-20 bg-zinc-700 rounded-full mx-auto mb-3 flex items-center justify-center text-4xl border-2 border-yellow-500">☕</div>
-                    <h2 className={`font-bold text-xl ${THEME.textMain}`}>{user ? user.displayName : "Visitante"}</h2>
-                    <p className="text-zinc-500 text-xs mb-4">{user ? user.email : ""}</p>
-                    
-                    <button 
-                        onClick={() => auth.signOut()}
-                        className="flex items-center justify-center gap-2 text-red-500 hover:text-red-400 text-xs font-bold uppercase tracking-wider mx-auto mb-4"
-                    >
-                        <Icon name="log-out" size={14} /> Sair
-                    </button>
-
-                    <div className={`mb-6 mt-4 p-4 rounded-xl border-2 border-dashed ${baristaMode ? 'border-yellow-400 bg-yellow-500/10' : 'border-zinc-700'}`}>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full ${baristaMode ? 'bg-yellow-400 text-black' : 'bg-zinc-700 text-gray-400'}`}>
-                                    <Icon name="shield" size={20} />
-                                </div>
-                                <div className="text-left">
-                                    <h4 className={`font-bold text-sm ${baristaMode ? 'text-white' : THEME.textMain}`}>Modo Barista</h4>
-                                </div>
-                            </div>
-                            <button onClick={() => setBaristaMode(!baristaMode)} className={`px-3 py-1 rounded-full text-xs font-bold ${baristaMode ? 'bg-white text-black' : 'bg-zinc-600 text-gray-400'}`}>
-                                {baristaMode ? 'ATIVO' : 'OFF'}
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div className="text-left mt-6">
-                        <h3 className={`font-bold text-md ${THEME.textMain} mb-4 flex items-center gap-2`}><Icon name="award" size={18} className="text-yellow-500" /> Conquistas</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                            {BADGES.map(badge => (
-                                <div key={badge.id} className={`${THEME.cardBg} p-3 rounded-lg border ${THEME.border} flex items-start gap-3 ${!badge.earned ? 'opacity-50 grayscale' : ''}`}>
-                                    <div className={`p-2 rounded-full ${THEME.bg} ${THEME.accentText}`}><Icon name={badge.iconName} size={16} /></div>
-                                    <div><h4 className={`font-bold text-sm ${THEME.textMain}`}>{badge.name}</h4><p className="text-[10px] text-gray-500 leading-tight mt-1">{badge.desc}</p></div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+        const Header = ({ baristaMode }) => (
+            <header className={`${THEME.headerBg} ${THEME.headerText} p-4 sticky top-0 z-50 shadow-md flex justify-between items-center transition-colors duration-300 border-b border-zinc-800`}>
+                <div className="flex items-center gap-2">
+                    <div className={`${THEME.accent} p-1.5 rounded-lg`}><Icon name="coffee" size={20} className="text-black" /></div>
+                    <h1 className="font-bold text-lg tracking-wider">MOKA <span className="font-light opacity-70">APP</span></h1>
                 </div>
-            </div>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border border-zinc-700 bg-zinc-800`}>
+                    {baristaMode ? <Icon name="shield" size={14} className="text-yellow-400" /> : "MC"}
+                </div>
+            </header>
         );
 
+        const RecipeCard = ({ recipe, isOfficial, onViewDetail, baristaMode, onEdit }) => {
+            const [likes, setLikes] = useState(recipe.likes || 0);
+            const [liked, setLiked] = useState(false);
+            const handleLike = async (e) => {
+                e.stopPropagation();
+                if (liked) return;
+                setLikes(prev => prev + 1);
+                setLiked(true);
+                if (isOfficial && recipe.id && !recipe.id.startsWith('static')) {
+                    try { await db.collection('recipes').doc(recipe.id).update({ likes: firebase.firestore.FieldValue.increment(1) }); } catch(e) {}
+                }
+            };
+            return (
+                <div onClick={() => onViewDetail(recipe)} className={`cursor-pointer ${THEME.cardBg} rounded-xl shadow-sm border ${THEME.border} overflow-hidden mb-4 hover:shadow-md transition-all relative group`}>
+                    {isOfficial && baristaMode && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onEdit(recipe); }}
+                            className="absolute top-2 right-2 z-10 p-2 bg-yellow-500 rounded-full shadow-lg text-black hover:scale-110 transition-transform"
+                        >
+                            <Icon name="edit" size={16} />
+                        </button>
+                    )}
+                    {/* Exibe Thumbnail na lista também */}
+                    {isOfficial && recipe.videoId && (
+                        <div className="w-full aspect-video bg-zinc-800 relative">
+                            <img src={getYoutubeThumbnail(recipe.videoId)} className="w-full h-full object-cover opacity-90" alt="Video" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-10 h-10 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                    <Icon name="play" size={20} className="text-white ml-1 fill-current" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <div className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${isOfficial ? `${THEME.headerBg} ${THEME.headerText} border border-zinc-700` : 'bg-zinc-700 text-zinc-300'}`}>{recipe.method}</span>
+                            <button onClick={handleLike} className={`flex items-center gap-1 ${liked ? 'text-red-500' : THEME.textSec} text-sm`}><Icon name="heart" size={14} className={liked ? "fill-current" : ""} /><span>{likes}</span></button>
+                        </div>
+                        <h3 className={`font-bold text-lg ${THEME.textMain} leading-tight mb-1`}>{recipe.title}</h3>
+                        {isOfficial ? <p className={`text-xs ${THEME.accentText} font-bold mb-2 uppercase tracking-wide`}>{recipe.region}</p> : <p className={`text-xs ${THEME.textSec} mb-2`}>por {recipe.author}</p>}
+                        <p className={`text-sm ${THEME.textSec} mb-4 line-clamp-2`}>{isOfficial ? recipe.notes : recipe.desc}</p>
+                        {isOfficial && <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-700 border-opacity-50"><div className={`flex gap-4 text-xs ${THEME.textSec} font-medium`}><span className="flex items-center gap-1"><Icon name="droplet" size={12}/> {recipe.ratio}</span><span className="flex items-center gap-1"><Icon name="thermometer" size={12}/> {recipe.temp}</span></div><span className={`${THEME.accentText} text-sm font-bold flex items-center gap-1`}>Ver <Icon name="chevron-right" size={16} /></span></div>}
+                    </div>
+                </div>
+            );
+        };
+
+        const TimerView = () => {
+            const [activeMethod, setActiveMethod] = useState(BREW_METHODS[0]);
+            const [time, setTime] = useState(0);
+            const [isActive, setIsActive] = useState(false);
+            useEffect(() => { let i; if(isActive) i = setInterval(() => setTime(t => t+1), 1000); return () => clearInterval(i); }, [isActive]);
+            return (
+                <div className="p-4 pb-24">
+                    <h2 className={`text-xl font-bold mb-4 ${THEME.textMain}`}>Barista de Bolso</h2>
+                    <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar mb-4">
+                        {BREW_METHODS.map(m => (
+                            <button key={m.name} onClick={() => { setActiveMethod(m); setTime(0); setIsActive(false); }} className={`flex flex-col items-center justify-center min-w-[80px] h-20 rounded-xl border transition-all ${activeMethod.name === m.name ? `${THEME.headerBg} ${THEME.headerText} border-yellow-500` : `${THEME.cardBg} ${THEME.textSec} border-zinc-700`}`}>
+                                <Icon name={m.icon} size={24} className="mb-1" />
+                                <span className="text-[10px] uppercase font-bold tracking-wider">{m.name.split(' ')[0]}</span>
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex flex-col items-center justify-center py-8">
+                        <div className="relative w-64 h-64 flex items-center justify-center">
+                            <div className={`absolute w-full h-full rounded-full border-4 border-zinc-700`}></div>
+                            <div className={`absolute w-full h-full rounded-full border-4 border-t-current border-r-current transition-all duration-1000 ${isActive ? 'animate-spin-slow' : ''} ${THEME.accentText}`} style={{ borderRightColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: 'transparent' }}></div>
+                            <div className="text-center z-10"><div className={`text-6xl font-black ${THEME.textMain} tabular-nums`}>{Math.floor(time/60)}:{(time%60).toString().padStart(2,'0')}</div><div className={`font-medium text-sm mt-1 uppercase tracking-widest ${THEME.textSec}`}>{isActive ? 'Extraindo' : 'Pronto'}</div></div>
+                        </div>
+                    </div>
+                    <div className="flex justify-center gap-6">
+                        <button onClick={() => {setIsActive(false); setTime(0);}} className={`w-14 h-14 rounded-full flex items-center justify-center hover:opacity-80 bg-zinc-800 text-white`}><Icon name="rotate-ccw" size={24} /></button>
+                        <button onClick={() => setIsActive(!isActive)} className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-95 ${isActive ? `${THEME.headerBg} ${THEME.headerText}` : `${THEME.accent} text-black`}`}>{isActive ? <Icon name="pause" size={32} /> : <Icon name="play" size={32} className="ml-1" />}</button>
+                    </div>
+                </div>
+            );
+        };
+
         const App = () => {
-            const [user, setUser] = useState(null);
-            const [isLoadingUser, setIsLoadingUser] = useState(true);
             const [activeTab, setActiveTab] = useState('home');
             const [recipes, setRecipes] = useState([]);
             const [baristaMode, setBaristaMode] = useState(false);
@@ -815,16 +708,6 @@ GITHUB_AI_SUMMARY:
             const [recipeToEdit, setRecipeToEdit] = useState(null);
             const [searchResults, setSearchResults] = useState(null);
 
-            // Auth Listener
-            useEffect(() => {
-                const unsubscribe = auth.onAuthStateChanged(currentUser => {
-                    setUser(currentUser);
-                    setIsLoadingUser(false);
-                });
-                return () => unsubscribe();
-            }, []);
-
-            // Data Listener
             useEffect(() => {
                 const unsub = db.collection('recipes').orderBy('createdAt', 'desc').onSnapshot(snap => setRecipes(snap.docs.map(d => ({id:d.id, ...d.data()}))), e => console.log(e));
                 return () => unsub();
@@ -844,14 +727,6 @@ GITHUB_AI_SUMMARY:
                 );
                 setSearchResults(results);
             };
-
-            if (isLoadingUser) {
-                return <div className="h-screen bg-zinc-900 flex items-center justify-center text-white"><span className="animate-spin text-3xl">☕</span></div>;
-            }
-
-            if (!user) {
-                return <AuthView />;
-            }
 
             const renderContent = () => {
                 if (viewMode === 'admin') {
@@ -875,7 +750,7 @@ GITHUB_AI_SUMMARY:
 
                 switch (activeTab) {
                     case 'timer': return <TimerView />;
-                    case 'sensory': return <SensoryEvaluation onFindRecipes={findRecipesForCoffee} user={user} />;
+                    case 'sensory': return <SensoryEvaluation onFindRecipes={findRecipesForCoffee} />;
                     case 'community': return (
                         <div className="p-4 pb-24">
                             <div className={`flex items-center gap-2 mb-6 ${THEME.cardBg} border ${THEME.border} p-2 rounded-lg`}>
@@ -891,7 +766,27 @@ GITHUB_AI_SUMMARY:
                             ))}
                         </div>
                     );
-                    case 'profile': return <ProfileView user={user} baristaMode={baristaMode} setBaristaMode={setBaristaMode} />;
+                    case 'profile': return (
+                        <div className="p-4 pb-24">
+                            <div className={`${THEME.cardBg} rounded-xl p-6 shadow-sm border ${THEME.border} mb-6 text-center`}>
+                                <div className="w-20 h-20 bg-zinc-700 rounded-full mx-auto mb-3 flex items-center justify-center text-4xl border-2 border-yellow-500">☕</div>
+                                <h2 className={`font-bold text-xl ${THEME.textMain}`}>Sócio Fundador</h2>
+                                <div className={`mb-6 mt-4 p-4 rounded-xl border-2 border-dashed ${baristaMode ? 'border-yellow-400 bg-yellow-500/10' : 'border-zinc-700'}`}><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${baristaMode ? 'bg-yellow-400 text-black' : 'bg-zinc-700 text-gray-400'}`}><Icon name="shield" size={20} /></div><div><h4 className={`font-bold text-sm ${baristaMode ? 'text-white' : THEME.textMain}`}>Modo Barista</h4></div></div><button onClick={() => setBaristaMode(!baristaMode)} className={`px-3 py-1 rounded-full text-xs font-bold ${baristaMode ? 'bg-white text-black' : 'bg-zinc-600 text-gray-400'}`}>{baristaMode ? 'ATIVO' : 'OFF'}</button></div></div>
+                                
+                                <div className="text-left mt-6">
+                                    <h3 className={`font-bold text-md ${THEME.textMain} mb-4 flex items-center gap-2`}><Icon name="award" size={18} className="text-yellow-500" /> Conquistas</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {BADGES.map(badge => (
+                                            <div key={badge.id} className={`${THEME.cardBg} p-3 rounded-lg border ${THEME.border} flex items-start gap-3 ${!badge.earned ? 'opacity-50 grayscale' : ''}`}>
+                                                <div className={`p-2 rounded-full ${THEME.bg} ${THEME.accentText}`}><Icon name={badge.iconName} size={16} /></div>
+                                                <div><h4 className={`font-bold text-sm ${THEME.textMain}`}>{badge.name}</h4><p className="text-[10px] text-gray-500 leading-tight mt-1">{badge.desc}</p></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
                     default: return (
                         <div className="p-4 pb-24">
                             <div className={`${THEME.headerBg} rounded-2xl p-5 mb-6 text-white relative overflow-hidden shadow-lg border border-zinc-700`}>
@@ -924,7 +819,7 @@ GITHUB_AI_SUMMARY:
                     <div className={`${THEME.bg} min-h-screen font-sans transition-colors duration-300 max-w-md mx-auto shadow-2xl overflow-hidden relative border-x border-zinc-800`}>
                         <Header baristaMode={baristaMode} />
                         <main className="min-h-[calc(100vh-140px)]">{renderContent()}</main>
-                        {selectedRecipe && <RecipeDetailModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} user={user} />}
+                        {selectedRecipe && <RecipeDetailModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />}
                         {searchResults && <RecipeSearchResultsModal recipes={searchResults} onClose={() => setSearchResults(null)} onViewDetail={setSelectedRecipe} />}
                         {viewMode !== 'admin' && (
                             <nav className={`fixed bottom-0 w-full max-w-md ${THEME.navBg} border-t ${THEME.border} flex justify-around py-3 pb-5 px-2 z-50 transition-colors duration-300`}>
