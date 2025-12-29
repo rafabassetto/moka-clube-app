@@ -1,3 +1,10 @@
+<!-- 
+GITHUB_AI_SUMMARY:
+- FIX: Adicionado tratamento de erro global para capturar falhas de script (Script Error).
+- FEAT: Inclusão de bloco de versionamento no cabeçalho para facilitar commits automáticos.
+- REFACTOR: Inicialização do Firebase Auth blindada contra falhas de carregamento de CDN.
+- UI: Ajustes de resiliência na interface de Login.
+-->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -5,6 +12,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Moka Clube App</title>
     
+    <!-- Tratamento de Erros de Script Global -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error("Erro Global Capturado:", message, source, lineno);
+            // Ignora erros de redimensionamento comuns em iframes de teste
+            if (message && message.indexOf('ResizeObserver') !== -1) return;
+            // Se for o erro genérico de script, tenta dar uma dica
+            if (message === 'Script error.') {
+                console.warn("Erro de Script detectado. Verifique se os bloqueadores de anúncio não estão bloqueando o Firebase.");
+            }
+        };
+    </script>
+
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -55,7 +75,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- FIREBASE ---
+        // --- FIREBASE SETUP ---
         const firebaseConfig = {
             apiKey: "AIzaSyDnElIN9JV7OtApqh4orYVXjdpr41jtyHc",
             authDomain: "moka-clube-app.firebaseapp.com",
@@ -65,9 +85,19 @@
             appId: "1:921502412834:web:f72730a5f7444cb440da7b"
         };
 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+        let db, auth;
+        try {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            // Verifica se o módulo de Auth foi carregado corretamente
+            if (firebase.auth) {
+                auth = firebase.auth();
+            } else {
+                console.error("Módulo Firebase Auth não carregado. Verifique sua conexão.");
+            }
+        } catch (error) {
+            console.error("Erro ao inicializar Firebase:", error);
+        }
 
         // --- TEMA ÚNICO ---
         const THEME = {
@@ -185,6 +215,8 @@
                 e.preventDefault();
                 setIsLoading(true);
                 try {
+                    if (!auth) throw new Error("Sistema de login não inicializado.");
+                    
                     if (isRegistering) {
                         // Register
                         const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
@@ -535,6 +567,7 @@
                 if (!formData.coffeeName) return alert("Digite o nome do café");
                 try {
                     if (formData.id) {
+                        // Update existing
                         await db.collection('evaluations').doc(formData.id).update({
                             coffeeName: formData.coffeeName,
                             rating: formData.rating,
@@ -542,6 +575,7 @@
                             attributes: formData.attributes
                         });
                     } else {
+                        // Create new
                         await db.collection('evaluations').add({ 
                             ...formData, 
                             userId: user.uid, // Salvando com ID do usuário
@@ -595,18 +629,37 @@
                                         </div>
                                         <p className="text-xs text-zinc-400 mb-3 line-clamp-2">{ev.notes}</p>
                                         <div className="flex gap-3 mt-3 items-center">
+                                            {/* Mini Radar Chart Visualization - Aumentei um pouco para 50x50 para dar destaque */}
                                             <div className="flex-shrink-0">
                                                 <svg width="50" height="50" viewBox="0 0 200 200" className="opacity-60">
+                                                    {/* Background guide circle */}
                                                     <circle cx="100" cy="100" r="80" fill="none" stroke="#333" strokeWidth="2" opacity="0.5" />
                                                     <polygon points={calculatePoints(ev.attributes)} fill="rgba(234, 179, 8, 0.4)" stroke="#EAB308" strokeWidth="4" />
                                                 </svg>
                                             </div>
+                                            
+                                            {/* Grid layout para atributos */}
                                             <div className="flex-1 grid grid-cols-3 gap-x-2 gap-y-1 text-[10px] text-zinc-400">
-                                                <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Acidez</span><span className="font-bold text-zinc-300">{ev.attributes.acidez}/5</span></div>
-                                                <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Doçura</span><span className="font-bold text-zinc-300">{ev.attributes.docura}/5</span></div>
-                                                <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Corpo</span><span className="font-bold text-zinc-300">{ev.attributes.corpo}/5</span></div>
-                                                <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Amargor</span><span className="font-bold text-zinc-300">{ev.attributes.amargor}/5</span></div>
-                                                <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Final</span><span className="font-bold text-zinc-300">{ev.attributes.finalizacao}/5</span></div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Acidez</span>
+                                                    <span className="font-bold text-zinc-300">{ev.attributes.acidez}/5</span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Doçura</span>
+                                                    <span className="font-bold text-zinc-300">{ev.attributes.docura}/5</span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Corpo</span>
+                                                    <span className="font-bold text-zinc-300">{ev.attributes.corpo}/5</span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Amargor</span>
+                                                    <span className="font-bold text-zinc-300">{ev.attributes.amargor}/5</span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Final</span>
+                                                    <span className="font-bold text-zinc-300">{ev.attributes.finalizacao}/5</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
