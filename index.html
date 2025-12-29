@@ -17,9 +17,9 @@
     <script>
         tailwind.config = {
             safelist: [
-                'bg-zinc-900', 'bg-zinc-800', 'bg-black',
-                'text-white', 'text-zinc-400', 'text-zinc-500',
-                'bg-yellow-500', 'text-yellow-500', 'border-yellow-500', 'bg-yellow-400',
+                'bg-zinc-900', 'bg-zinc-800', 'bg-black', 'bg-zinc-950',
+                'text-white', 'text-zinc-400', 'text-zinc-500', 'text-zinc-300',
+                'bg-yellow-500', 'text-yellow-500', 'border-yellow-500', 'bg-yellow-400', 'text-yellow-400',
                 'border-zinc-700', 'border-zinc-800',
                 'fill-current', 'animate-pulse', 'border-current'
             ],
@@ -81,7 +81,7 @@
             border: 'border-zinc-700'
         };
 
-        // --- SISTEMA DE ÍCONES INTERNO ---
+        // --- ÍCONES INTERNOS ---
         const ICON_PATHS = {
             'coffee': <path d="M17 8h1a4 4 0 1 1 0 8h-1 M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z M6 1v3 M10 1v3 M14 1v3" />,
             'timer': <path d="M10 2h4 M12 14v-4 M4 13a8 8 0 0 1 8-7 8 8 0 1 1-8 7 M22 13a18.3 18.3 0 0 1-4 6" />, 
@@ -92,6 +92,7 @@
             'thermometer': <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z" />,
             'chevron-right': <path d="m9 18 6-6-6-6" />,
             'play': <polygon points="5 3 19 12 5 21 5 3" />,
+            'play-circle': <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" />,
             'pause': <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>,
             'rotate-ccw': <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></>,
             'search': <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>,
@@ -111,10 +112,11 @@
             'flask-conical': <><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" /><line x1="8.5" x2="15.5" y1="2" y2="2" /><path d="M8.5 2h7" /></>,
             'triangle': <path d="M13.73 21a2 2 0 0 1-3.46 0l-8-14A2 2 0 0 1 4 4h16a2 2 0 0 1 1.73 3l-8 14z" />,
             'trash': <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>,
-            'edit': <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+            'edit': <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />,
+            'send': <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
         };
 
-        const Icon = ({ name, size = 24, className, ...props }) => {
+        const Icon = ({ name, size = 24, className, fill = "none", ...props }) => {
             const content = ICON_PATHS[name];
             if (!content) return null;
             
@@ -124,7 +126,7 @@
                     width={size} 
                     height={size} 
                     viewBox="0 0 24 24" 
-                    fill="none" 
+                    fill={fill} 
                     stroke="currentColor" 
                     strokeWidth="2" 
                     strokeLinecap="round" 
@@ -137,7 +139,22 @@
             );
         };
 
-        // --- DADOS MOCK (Atualizados para nova estrutura de passos) ---
+        // --- DADOS E MÉTODOS ---
+        const BREW_METHODS = [
+            { name: "Hario V60", icon: "coffee", defaultTime: 180 },
+            { name: "Prensa Francesa", icon: "container", defaultTime: 240 },
+            { name: "Aeropress", icon: "arrow-down-circle", defaultTime: 120 },
+            { name: "Chemex", icon: "flask-conical", defaultTime: 210 },
+            { name: "Koar", icon: "triangle", defaultTime: 180 },
+        ];
+
+        const BADGES = [
+            { id: 1, name: "Pioneiro do Norte", iconName: "map-pin", desc: "Provou 5 cafés do PR", earned: true },
+            { id: 2, name: "Alquimista V60", iconName: "coffee", desc: "10 receitas criadas", earned: true },
+            { id: 3, name: "Caçador de Acidez", iconName: "zap", desc: "Avaliou 5 cafés cítricos", earned: false },
+            { id: 4, name: "Mestre da Prensa", iconName: "timer", desc: "Usou timer 50x", earned: false },
+        ];
+
         const INITIAL_OFFICIAL_RECIPES = [
             {
                 id: 'static-1',
@@ -165,23 +182,9 @@
             { id: 102, title: "V60 Gelado (Japanese Style)", coffee: "Etiópia Brasileiro", author: "Ana Clara", method: "V60", likes: 89, time_ago: "5h atrás", desc: "Substituí 40% da água por gelo na jarra." }
         ];
 
-        const BREW_METHODS = [
-            { name: "Hario V60", icon: "coffee", defaultTime: 180 },
-            { name: "Prensa Francesa", icon: "container", defaultTime: 240 },
-            { name: "Aeropress", icon: "arrow-down-circle", defaultTime: 120 },
-            { name: "Chemex", icon: "flask-conical", defaultTime: 210 },
-            { name: "Koar", icon: "triangle", defaultTime: 180 },
-        ];
-
-        const BADGES = [
-            { id: 1, name: "Pioneiro do Norte", iconName: "map-pin", desc: "Provou 5 cafés do PR", earned: true },
-            { id: 2, name: "Alquimista V60", iconName: "coffee", desc: "10 receitas criadas", earned: true },
-            { id: 3, name: "Caçador de Acidez", iconName: "zap", desc: "Avaliou 5 cafés cítricos", earned: false },
-            { id: 4, name: "Mestre da Prensa", iconName: "timer", desc: "Usou timer 50x", earned: false },
-        ];
-
         // --- AUXILIARES ---
-        const getYoutubeEmbedUrl = (videoId) => `https://www.youtube.com/embed/${videoId}`;
+        const getYoutubeEmbedUrl = (videoId) => `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        const getYoutubeThumbnail = (videoId) => `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
         const extractVideoId = (url) => {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
             const match = url.match(regExp);
@@ -190,21 +193,146 @@
 
         // --- COMPONENTES ---
 
+        // YouTube Player com Thumbnail Inteligente
+        const YouTubePlayer = ({ videoId }) => {
+            const [isPlaying, setIsPlaying] = useState(false);
+
+            if (!videoId) return null;
+
+            if (isPlaying) {
+                return (
+                    <div className="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg animate-fade-in">
+                        <iframe width="100%" height="100%" src={getYoutubeEmbedUrl(videoId)} frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen></iframe>
+                    </div>
+                );
+            }
+
+            return (
+                <div 
+                    className="w-full aspect-video bg-zinc-800 rounded-xl overflow-hidden shadow-lg relative group cursor-pointer"
+                    onClick={() => setIsPlaying(true)}
+                >
+                    <img src={getYoutubeThumbnail(videoId)} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Video Thumbnail" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                            <Icon name="play" size={32} className="text-white ml-1 fill-current" />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Seção de Reviews e Comentários
+        const ReviewSection = ({ recipeId }) => {
+            const [reviews, setReviews] = useState([]);
+            const [newRating, setNewRating] = useState(0);
+            const [newComment, setNewComment] = useState("");
+            const [isSubmitting, setIsSubmitting] = useState(false);
+
+            useEffect(() => {
+                if (!recipeId || recipeId.startsWith('static')) return;
+                
+                // Usando uma subcoleção para reviews: recipes/ID/reviews
+                const unsubscribe = db.collection('recipes').doc(recipeId).collection('reviews')
+                    .orderBy('createdAt', 'desc')
+                    .onSnapshot(snapshot => {
+                        setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                    }, err => console.log("Erro ao carregar reviews:", err));
+                
+                return () => unsubscribe();
+            }, [recipeId]);
+
+            const handleSubmit = async () => {
+                if (newRating === 0) return alert("Por favor, selecione uma nota.");
+                if (!recipeId || recipeId.startsWith('static')) return alert("Receitas de exemplo não aceitam comentários reais.");
+
+                setIsSubmitting(true);
+                try {
+                    await db.collection('recipes').doc(recipeId).collection('reviews').add({
+                        author: "Você", // Em um app real, seria o user.displayName
+                        rating: newRating,
+                        comment: newComment,
+                        createdAt: new Date()
+                    });
+                    setNewComment("");
+                    setNewRating(0);
+                } catch (error) {
+                    console.error(error);
+                    alert("Erro ao enviar review.");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            return (
+                <div className="mt-6 pt-6 border-t border-zinc-700">
+                    <h4 className="font-bold text-lg mb-4 text-white flex items-center gap-2">
+                        <Icon name="star" size={20} className="text-yellow-500 fill-current" />
+                        Avaliações e Comentários
+                    </h4>
+
+                    {/* Formulário */}
+                    <div className="bg-zinc-800/50 p-4 rounded-xl mb-6 border border-zinc-700">
+                        <div className="flex justify-center gap-2 mb-3">
+                            {[1, 2, 3, 4, 5].map(star => (
+                                <button key={star} onClick={() => setNewRating(star)} className="focus:outline-none hover:scale-110 transition-transform">
+                                    <Icon 
+                                        name="star" 
+                                        size={28} 
+                                        className={star <= newRating ? "text-yellow-500 fill-current" : "text-zinc-600"} 
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                        <textarea 
+                            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-sm text-white focus:border-yellow-500 outline-none resize-none mb-2"
+                            rows="2"
+                            placeholder="O que achou desta receita?"
+                            value={newComment}
+                            onChange={e => setNewComment(e.target.value)}
+                        ></textarea>
+                        <button 
+                            onClick={handleSubmit}
+                            disabled={isSubmitting}
+                            className="w-full bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-2 rounded-lg text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                        >
+                            {isSubmitting ? "Enviando..." : <><Icon name="send" size={14} /> Publicar Avaliação</>}
+                        </button>
+                    </div>
+
+                    {/* Lista */}
+                    <div className="space-y-4">
+                        {reviews.length === 0 && <p className="text-center text-zinc-500 text-sm">Seja o primeiro a avaliar!</p>}
+                        {reviews.map(review => (
+                            <div key={review.id} className="border-b border-zinc-800 pb-3 last:border-0">
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className="font-bold text-sm text-white">{review.author}</span>
+                                    <div className="flex text-yellow-500">
+                                        {[...Array(review.rating)].map((_, i) => <Icon key={i} name="star" size={12} className="fill-current" />)}
+                                    </div>
+                                </div>
+                                <p className="text-zinc-400 text-xs leading-relaxed">{review.comment}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
         const RecipeDetailModal = ({ recipe, onClose }) => {
             if (!recipe) return null;
             return (
                 <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
                     <div className={`${THEME.cardBg} w-full max-w-md h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl flex flex-col shadow-2xl overflow-hidden border ${THEME.border}`}>
-                        <div className={`flex justify-between items-center p-4 border-b ${THEME.border}`}>
+                        <div className={`flex justify-between items-center p-4 border-b ${THEME.border} bg-zinc-800 sticky top-0 z-10`}>
                             <div><h3 className={`font-bold text-lg ${THEME.textMain}`}>{recipe.title}</h3><p className={`text-xs ${THEME.textSec}`}>por {recipe.author}</p></div>
                             <button onClick={onClose} className={`p-2 rounded-full hover:bg-white/10 ${THEME.textMain}`}><Icon name="x" size={20} /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                            {recipe.videoId && (
-                                <div className="rounded-xl overflow-hidden shadow-lg bg-black aspect-video">
-                                    <iframe width="100%" height="100%" src={getYoutubeEmbedUrl(recipe.videoId)} frameBorder="0" allowFullScreen></iframe>
-                                </div>
-                            )}
+                            
+                            {/* Vídeo / Thumbnail */}
+                            <YouTubePlayer videoId={recipe.videoId} />
+
                             <div className="grid grid-cols-3 gap-2">
                                 <div className={`p-3 rounded-lg text-center border ${THEME.border}`}>
                                     <div className={`mx-auto mb-1 ${THEME.accentText} flex justify-center`}><Icon name="droplet" size={16} /></div>
@@ -230,14 +358,15 @@
                                         <div key={idx} className="relative">
                                             <div className={`absolute -left-[21px] top-0 w-4 h-4 rounded-full ${THEME.accent} border-2 border-white`}></div>
                                             <span className={`text-xs font-bold ${THEME.accentText} uppercase tracking-wider block mb-1`}>{step.title}</span>
-                                            <p className={`text-sm ${THEME.textMain}`}>{step.text}</p>
+                                            <p className={`text-sm ${THEME.textMain}`}>{step.text || step.instructions}</p>
                                         </div>
                                     )) : <p className={`text-sm ${THEME.textSec}`}>Siga o método padrão {recipe.method}.</p>}
                                 </div>
                             </div>
-                        </div>
-                        <div className={`p-4 border-t ${THEME.border}`}>
-                            <button onClick={onClose} className={`w-full py-3 rounded-xl font-bold text-black ${THEME.accent} shadow-lg hover:brightness-110`}>Preparar Agora</button>
+
+                            {/* Seção de Comentários */}
+                            <ReviewSection recipeId={recipe.id} />
+
                         </div>
                     </div>
                 </div>
@@ -247,10 +376,9 @@
         const AdminRecipeForm = ({ onSave, onCancel, isSaving, initialData }) => {
             const [formData, setFormData] = useState({ 
                 title: '', region: '', method: 'Hario V60', ratio: '1:16', temp: '93°C', notes: '', videoUrl: '',
-                steps: [{ title: 'Início', text: '' }] // Passo inicial padrão
+                steps: [{ title: 'Início', text: '' }]
             });
 
-            // Popula o formulário se estiver em modo de edição
             useEffect(() => {
                 if (initialData) {
                     const videoUrl = initialData.videoId ? `https://youtube.com/watch?v=${initialData.videoId}` : '';
@@ -291,32 +419,17 @@
                         <div><label className={`block text-xs font-bold ${THEME.textSec} mb-1 uppercase flex items-center gap-1`}><Icon name="youtube" size={14} /> Link Vídeo</label><input type="text" className={`w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-sm`} placeholder="YouTube Link" value={formData.videoUrl} onChange={e => setFormData({...formData, videoUrl: e.target.value})} /></div>
                         <div><label className={`block text-xs font-bold ${THEME.textSec} mb-1 uppercase`}>Notas</label><textarea className={`w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-sm`} rows="3" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea></div>
                         
-                        {/* Seção de Passos da Receita */}
                         <div className="pt-2 border-t border-zinc-700">
                             <label className={`block text-xs font-bold ${THEME.textSec} mb-3 uppercase`}>Passo a Passo</label>
                             {formData.steps.map((step, index) => (
                                 <div key={index} className="flex gap-2 mb-2 items-start">
                                     <div className="w-1/4">
-                                        <input 
-                                            type="text" 
-                                            className="w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-xs" 
-                                            placeholder="Tempo (ex: 30s)"
-                                            value={step.title}
-                                            onChange={(e) => handleStepChange(index, 'title', e.target.value)}
-                                        />
+                                        <input type="text" className="w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-xs" placeholder="Tempo" value={step.title} onChange={(e) => handleStepChange(index, 'title', e.target.value)} />
                                     </div>
                                     <div className="flex-1">
-                                        <input 
-                                            type="text" 
-                                            className="w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-xs" 
-                                            placeholder="Instrução"
-                                            value={step.text}
-                                            onChange={(e) => handleStepChange(index, 'text', e.target.value)}
-                                        />
+                                        <input type="text" className="w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-xs" placeholder="Instrução" value={step.text} onChange={(e) => handleStepChange(index, 'text', e.target.value)} />
                                     </div>
-                                    <button onClick={() => removeStep(index)} className="p-2 text-red-500 hover:text-red-400">
-                                        <Icon name="trash" size={16} />
-                                    </button>
+                                    <button onClick={() => removeStep(index)} className="p-2 text-red-500 hover:text-red-400"><Icon name="trash" size={16} /></button>
                                 </div>
                             ))}
                             <button onClick={addStep} className={`mt-2 w-full py-2 border border-dashed border-zinc-600 text-zinc-400 rounded-lg text-xs font-bold hover:bg-zinc-800`}>+ ADICIONAR PASSO</button>
@@ -411,7 +524,17 @@
                             <Icon name="edit" size={16} />
                         </button>
                     )}
-                    {isOfficial && recipe.videoId && <div className="w-full aspect-video bg-black relative"><iframe width="100%" height="100%" src={getYoutubeEmbedUrl(recipe.videoId)} frameBorder="0" className="pointer-events-none"></iframe></div>}
+                    {/* Exibe Thumbnail na lista também */}
+                    {isOfficial && recipe.videoId && (
+                        <div className="w-full aspect-video bg-zinc-800 relative">
+                            <img src={getYoutubeThumbnail(recipe.videoId)} className="w-full h-full object-cover opacity-90" alt="Video" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-10 h-10 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                    <Icon name="play" size={20} className="text-white ml-1 fill-current" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div className="p-4">
                         <div className="flex justify-between items-start mb-2">
                             <span className={`text-xs font-bold px-2 py-1 rounded-full ${isOfficial ? `${THEME.headerBg} ${THEME.headerText} border border-zinc-700` : 'bg-zinc-700 text-zinc-300'}`}>{recipe.method}</span>
@@ -482,10 +605,8 @@
                         onSave={async (r) => { 
                             try { 
                                 if (r.id) {
-                                    // Update existing
                                     await db.collection('recipes').doc(r.id).update({...r});
                                 } else {
-                                    // Create new
                                     await db.collection('recipes').add({...r, createdAt: new Date(), author: 'Moka Clube'}); 
                                 }
                                 setViewMode('normal'); 
