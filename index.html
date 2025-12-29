@@ -81,7 +81,7 @@
             border: 'border-zinc-700'
         };
 
-        // --- ÍCONES INTERNOS ---
+        // --- ÍCONES INTERNOS (SINTAXE CORRIGIDA) ---
         const ICON_PATHS = {
             'coffee': <path d="M17 8h1a4 4 0 1 1 0 8h-1 M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z M6 1v3 M10 1v3 M14 1v3" />,
             'timer': <path d="M10 2h4 M12 14v-4 M4 13a8 8 0 0 1 8-7 8 8 0 1 1-8 7 M22 13a18.3 18.3 0 0 1-4 6" />, 
@@ -92,7 +92,7 @@
             'thermometer': <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z" />,
             'chevron-right': <path d="m9 18 6-6-6-6" />,
             'play': <polygon points="5 3 19 12 5 21 5 3" />,
-            'play-circle': <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" />,
+            'play-circle': <><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></>, // CORRIGIDO: Envolvido em fragmento
             'pause': <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>,
             'rotate-ccw': <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></>,
             'search': <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>,
@@ -113,7 +113,7 @@
             'triangle': <path d="M13.73 21a2 2 0 0 1-3.46 0l-8-14A2 2 0 0 1 4 4h16a2 2 0 0 1 1.73 3l-8 14z" />,
             'trash': <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>,
             'edit': <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />,
-            'send': <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+            'send': <><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></> // CORRIGIDO: Envolvido em fragmento
         };
 
         const Icon = ({ name, size = 24, className, fill = "none", ...props }) => {
@@ -138,6 +138,32 @@
                 </svg>
             );
         };
+
+        // --- ERROR BOUNDARY ---
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="p-8 text-center text-white bg-red-900 h-screen flex flex-col items-center justify-center">
+                            <h2 className="text-2xl font-bold mb-2">Ops! Algo deu errado.</h2>
+                            <p className="text-sm opacity-70 mb-4">Estamos trabalhando para corrigir.</p>
+                            <button onClick={() => window.location.reload()} className="bg-white text-red-900 px-4 py-2 rounded font-bold">Recarregar App</button>
+                            <pre className="mt-4 text-[10px] text-left bg-black/50 p-4 rounded w-full overflow-auto max-w-sm">{this.state.error.toString()}</pre>
+                        </div>
+                    );
+                }
+                return this.props.children; 
+            }
+        }
 
         // --- DADOS E MÉTODOS ---
         const BREW_METHODS = [
@@ -308,7 +334,7 @@
                                 <div className="flex justify-between items-start mb-1">
                                     <span className="font-bold text-sm text-white">{review.author}</span>
                                     <div className="flex text-yellow-500">
-                                        {[...Array(review.rating)].map((_, i) => <Icon key={i} name="star" size={12} className="fill-current" />)}
+                                        {[...Array(Number(review.rating) || 0)].map((_, i) => <Icon key={i} name="star" size={12} className="fill-current" />)}
                                     </div>
                                 </div>
                                 <p className="text-zinc-400 text-xs leading-relaxed">{review.comment}</p>
@@ -685,20 +711,22 @@
             };
 
             return (
-                <div className={`${THEME.bg} min-h-screen font-sans transition-colors duration-300 max-w-md mx-auto shadow-2xl overflow-hidden relative border-x border-zinc-800`}>
-                    <Header baristaMode={baristaMode} />
-                    <main className="min-h-[calc(100vh-140px)]">{renderContent()}</main>
-                    {selectedRecipe && <RecipeDetailModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />}
-                    {viewMode !== 'admin' && (
-                        <nav className={`fixed bottom-0 w-full max-w-md ${THEME.navBg} border-t ${THEME.border} flex justify-around py-3 pb-5 px-2 z-50 transition-colors duration-300`}>
-                            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'home' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><Icon name="coffee" size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} /><span className="text-[10px] font-medium">Início</span></button>
-                            <button onClick={() => setActiveTab('timer')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'timer' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><Icon name="timer" size={24} strokeWidth={activeTab === 'timer' ? 2.5 : 2} /><span className="text-[10px] font-medium">Timer</span></button>
-                            <button onClick={() => setActiveTab('sensory')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'sensory' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><Icon name="bar-chart-2" size={24} strokeWidth={activeTab === 'sensory' ? 2.5 : 2} /><span className="text-[10px] font-medium">Avaliar</span></button>
-                            <button onClick={() => setActiveTab('community')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'community' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><Icon name="users" size={24} strokeWidth={activeTab === 'community' ? 2.5 : 2} /><span className="text-[10px] font-medium">Tribo</span></button>
-                            <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'profile' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><div className={`w-6 h-6 rounded-full overflow-hidden border ${activeTab === 'profile' ? THEME.accent : 'border-zinc-700 bg-zinc-800'} relative flex items-center justify-center`}><span className="text-[8px] font-bold text-gray-500">EU</span></div><span className="text-[10px] font-medium">Perfil</span></button>
-                        </nav>
-                    )}
-                </div>
+                <ErrorBoundary>
+                    <div className={`${THEME.bg} min-h-screen font-sans transition-colors duration-300 max-w-md mx-auto shadow-2xl overflow-hidden relative border-x border-zinc-800`}>
+                        <Header baristaMode={baristaMode} />
+                        <main className="min-h-[calc(100vh-140px)]">{renderContent()}</main>
+                        {selectedRecipe && <RecipeDetailModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />}
+                        {viewMode !== 'admin' && (
+                            <nav className={`fixed bottom-0 w-full max-w-md ${THEME.navBg} border-t ${THEME.border} flex justify-around py-3 pb-5 px-2 z-50 transition-colors duration-300`}>
+                                <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'home' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><Icon name="coffee" size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} /><span className="text-[10px] font-medium">Início</span></button>
+                                <button onClick={() => setActiveTab('timer')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'timer' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><Icon name="timer" size={24} strokeWidth={activeTab === 'timer' ? 2.5 : 2} /><span className="text-[10px] font-medium">Timer</span></button>
+                                <button onClick={() => setActiveTab('sensory')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'sensory' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><Icon name="bar-chart-2" size={24} strokeWidth={activeTab === 'sensory' ? 2.5 : 2} /><span className="text-[10px] font-medium">Avaliar</span></button>
+                                <button onClick={() => setActiveTab('community')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'community' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><Icon name="users" size={24} strokeWidth={activeTab === 'community' ? 2.5 : 2} /><span className="text-[10px] font-medium">Tribo</span></button>
+                                <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'profile' ? THEME.accentText : 'text-gray-500 hover:text-gray-300'}`}><div className={`w-6 h-6 rounded-full overflow-hidden border ${activeTab === 'profile' ? THEME.accent : 'border-zinc-700 bg-zinc-800'} relative flex items-center justify-center`}><span className="text-[8px] font-bold text-gray-500">EU</span></div><span className="text-[10px] font-medium">Perfil</span></button>
+                            </nav>
+                        )}
+                    </div>
+                </ErrorBoundary>
             );
         };
 
