@@ -81,8 +81,7 @@
             border: 'border-zinc-700'
         };
 
-        // --- SISTEMA DE ÍCONES INTERNO (SEM DEPENDÊNCIA EXTERNA) ---
-        // Desenhamos os ícones SVG manualmente para evitar erros de script externo
+        // --- SISTEMA DE ÍCONES INTERNO ---
         const ICON_PATHS = {
             'coffee': <path d="M17 8h1a4 4 0 1 1 0 8h-1 M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z M6 1v3 M10 1v3 M14 1v3" />,
             'timer': <path d="M10 2h4 M12 14v-4 M4 13a8 8 0 0 1 8-7 8 8 0 1 1-8 7 M22 13a18.3 18.3 0 0 1-4 6" />, 
@@ -110,7 +109,9 @@
             'container': <><path d="M20.9 19.8A2 2 0 0 1 19 21H5a2 2 0 0 1-1.9-1.2l-2.4-7.2A2 2 0 0 1 2.6 10H21.4a2 2 0 0 1 1.9 2.6Z" /><path d="M10 21V10" /><path d="M14 21V10" /></>,
             'arrow-down-circle': <><circle cx="12" cy="12" r="10" /><polyline points="8 12 12 16 16 12" /><line x1="12" x2="12" y1="8" y2="16" /></>,
             'flask-conical': <><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" /><line x1="8.5" x2="15.5" y1="2" y2="2" /><path d="M8.5 2h7" /></>,
-            'triangle': <path d="M13.73 21a2 2 0 0 1-3.46 0l-8-14A2 2 0 0 1 4 4h16a2 2 0 0 1 1.73 3l-8 14z" />
+            'triangle': <path d="M13.73 21a2 2 0 0 1-3.46 0l-8-14A2 2 0 0 1 4 4h16a2 2 0 0 1 1.73 3l-8 14z" />,
+            'trash': <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>,
+            'edit': <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
         };
 
         const Icon = ({ name, size = 24, className, ...props }) => {
@@ -136,7 +137,7 @@
             );
         };
 
-        // --- DADOS MOCK ---
+        // --- DADOS MOCK (Atualizados para nova estrutura de passos) ---
         const INITIAL_OFFICIAL_RECIPES = [
             {
                 id: 'static-1',
@@ -151,10 +152,10 @@
                 temp: "93°C",
                 videoId: "w2-S7Ww2rSc",
                 steps: [
-                    { time: 0, text: "Hidrate o filtro e adicione 20g de café." },
-                    { time: 0, text: "Inicie o timer. Faça o bloom com 50g de água." },
-                    { time: 30, text: "Despeje suavemente até atingir 200g." },
-                    { time: 90, text: "Complete até 320g e aguarde finalizar." }
+                    { title: "Início", text: "Hidrate o filtro e adicione 20g de café." },
+                    { title: "00:00", text: "Inicie o timer. Faça o bloom com 50g de água." },
+                    { title: "00:30", text: "Despeje suavemente até atingir 200g." },
+                    { title: "01:30", text: "Complete até 320g e aguarde finalizar." }
                 ]
             }
         ];
@@ -228,8 +229,8 @@
                                     {recipe.steps && recipe.steps.length > 0 ? recipe.steps.map((step, idx) => (
                                         <div key={idx} className="relative">
                                             <div className={`absolute -left-[21px] top-0 w-4 h-4 rounded-full ${THEME.accent} border-2 border-white`}></div>
-                                            <span className={`text-xs font-bold ${THEME.accentText} uppercase tracking-wider block mb-1`}>{step.time > 0 ? `${step.time}s` : 'Início'}</span>
-                                            <p className={`text-sm ${THEME.textMain}`}>{step.text || step.instructions}</p>
+                                            <span className={`text-xs font-bold ${THEME.accentText} uppercase tracking-wider block mb-1`}>{step.title}</span>
+                                            <p className={`text-sm ${THEME.textMain}`}>{step.text}</p>
                                         </div>
                                     )) : <p className={`text-sm ${THEME.textSec}`}>Siga o método padrão {recipe.method}.</p>}
                                 </div>
@@ -243,16 +244,43 @@
             );
         };
 
-        const AdminRecipeForm = ({ onSave, onCancel, isSaving }) => {
-            const [formData, setFormData] = useState({ title: '', region: '', method: 'Hario V60', ratio: '1:16', temp: '93°C', notes: '', videoUrl: '' });
+        const AdminRecipeForm = ({ onSave, onCancel, isSaving, initialData }) => {
+            const [formData, setFormData] = useState({ 
+                title: '', region: '', method: 'Hario V60', ratio: '1:16', temp: '93°C', notes: '', videoUrl: '',
+                steps: [{ title: 'Início', text: '' }] // Passo inicial padrão
+            });
+
+            // Popula o formulário se estiver em modo de edição
+            useEffect(() => {
+                if (initialData) {
+                    const videoUrl = initialData.videoId ? `https://youtube.com/watch?v=${initialData.videoId}` : '';
+                    setFormData({ ...initialData, videoUrl, steps: initialData.steps || [] });
+                }
+            }, [initialData]);
+
+            const handleStepChange = (index, field, value) => {
+                const newSteps = [...formData.steps];
+                newSteps[index][field] = value;
+                setFormData({ ...formData, steps: newSteps });
+            };
+
+            const addStep = () => {
+                setFormData({ ...formData, steps: [...formData.steps, { title: '', text: '' }] });
+            };
+
+            const removeStep = (index) => {
+                const newSteps = formData.steps.filter((_, i) => i !== index);
+                setFormData({ ...formData, steps: newSteps });
+            };
+
             const handleSubmit = () => {
                 const videoId = formData.videoUrl ? extractVideoId(formData.videoUrl) : '';
-                const defaultSteps = [{ time: 0, text: "Escalde o filtro e adicione o café." }, { time: 0, text: "Inicie o timer e faça o bloom." }, { time: 45, text: "Despeje o restante da água." }];
-                onSave({ ...formData, videoId, author: 'Moka Clube', likes: 0, steps: defaultSteps });
+                onSave({ ...formData, videoId, author: 'Moka Clube', likes: initialData ? initialData.likes : 0 });
             };
+
             return (
                 <div className={`p-4 ${THEME.bg} min-h-screen pb-24`}>
-                    <div className="flex items-center gap-2 mb-6"><div className={THEME.accentText}><Icon name="shield" size={24} /></div><h2 className={`text-xl font-bold ${THEME.textMain}`}>Nova Receita Oficial</h2></div>
+                    <div className="flex items-center gap-2 mb-6"><div className={THEME.accentText}><Icon name="shield" size={24} /></div><h2 className={`text-xl font-bold ${THEME.textMain}`}>{initialData ? 'Editar Receita' : 'Nova Receita Oficial'}</h2></div>
                     <div className={`${THEME.cardBg} p-5 rounded-xl border ${THEME.border} space-y-4`}>
                         <div><label className={`block text-xs font-bold ${THEME.textSec} mb-1 uppercase`}>Nome do Café</label><input type="text" className={`w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-sm`} placeholder="Ex: Catuaí..." value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
                         <div><label className={`block text-xs font-bold ${THEME.textSec} mb-1 uppercase`}>Região</label><input type="text" className={`w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-sm`} placeholder="Ex: Chapada..." value={formData.region} onChange={e => setFormData({...formData, region: e.target.value})} /></div>
@@ -262,7 +290,39 @@
                         </div>
                         <div><label className={`block text-xs font-bold ${THEME.textSec} mb-1 uppercase flex items-center gap-1`}><Icon name="youtube" size={14} /> Link Vídeo</label><input type="text" className={`w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-sm`} placeholder="YouTube Link" value={formData.videoUrl} onChange={e => setFormData({...formData, videoUrl: e.target.value})} /></div>
                         <div><label className={`block text-xs font-bold ${THEME.textSec} mb-1 uppercase`}>Notas</label><textarea className={`w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-sm`} rows="3" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea></div>
-                        <div className="flex gap-3 pt-2"><button onClick={onCancel} className={`flex-1 py-3 rounded-lg font-bold text-sm ${THEME.textSec} border border-transparent`}>Cancelar</button><button onClick={handleSubmit} disabled={isSaving} className={`flex-1 py-3 rounded-lg font-bold text-sm text-black ${THEME.accent} shadow-md flex items-center justify-center gap-2 hover:brightness-110`}>{isSaving ? '...' : 'Publicar'}</button></div>
+                        
+                        {/* Seção de Passos da Receita */}
+                        <div className="pt-2 border-t border-zinc-700">
+                            <label className={`block text-xs font-bold ${THEME.textSec} mb-3 uppercase`}>Passo a Passo</label>
+                            {formData.steps.map((step, index) => (
+                                <div key={index} className="flex gap-2 mb-2 items-start">
+                                    <div className="w-1/4">
+                                        <input 
+                                            type="text" 
+                                            className="w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-xs" 
+                                            placeholder="Tempo (ex: 30s)"
+                                            value={step.title}
+                                            onChange={(e) => handleStepChange(index, 'title', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <input 
+                                            type="text" 
+                                            className="w-full p-2 rounded border bg-zinc-900 border-zinc-700 text-white text-xs" 
+                                            placeholder="Instrução"
+                                            value={step.text}
+                                            onChange={(e) => handleStepChange(index, 'text', e.target.value)}
+                                        />
+                                    </div>
+                                    <button onClick={() => removeStep(index)} className="p-2 text-red-500 hover:text-red-400">
+                                        <Icon name="trash" size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                            <button onClick={addStep} className={`mt-2 w-full py-2 border border-dashed border-zinc-600 text-zinc-400 rounded-lg text-xs font-bold hover:bg-zinc-800`}>+ ADICIONAR PASSO</button>
+                        </div>
+
+                        <div className="flex gap-3 pt-4"><button onClick={onCancel} className={`flex-1 py-3 rounded-lg font-bold text-sm ${THEME.textSec} border border-transparent`}>Cancelar</button><button onClick={handleSubmit} disabled={isSaving} className={`flex-1 py-3 rounded-lg font-bold text-sm text-black ${THEME.accent} shadow-md flex items-center justify-center gap-2 hover:brightness-110`}>{isSaving ? '...' : 'Salvar Receita'}</button></div>
                     </div>
                 </div>
             );
@@ -329,7 +389,7 @@
             </header>
         );
 
-        const RecipeCard = ({ recipe, isOfficial, onViewDetail }) => {
+        const RecipeCard = ({ recipe, isOfficial, onViewDetail, baristaMode, onEdit }) => {
             const [likes, setLikes] = useState(recipe.likes || 0);
             const [liked, setLiked] = useState(false);
             const handleLike = async (e) => {
@@ -342,7 +402,15 @@
                 }
             };
             return (
-                <div onClick={() => onViewDetail(recipe)} className={`cursor-pointer ${THEME.cardBg} rounded-xl shadow-sm border ${THEME.border} overflow-hidden mb-4 hover:shadow-md transition-all`}>
+                <div onClick={() => onViewDetail(recipe)} className={`cursor-pointer ${THEME.cardBg} rounded-xl shadow-sm border ${THEME.border} overflow-hidden mb-4 hover:shadow-md transition-all relative group`}>
+                    {isOfficial && baristaMode && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onEdit(recipe); }}
+                            className="absolute top-2 right-2 z-10 p-2 bg-yellow-500 rounded-full shadow-lg text-black hover:scale-110 transition-transform"
+                        >
+                            <Icon name="edit" size={16} />
+                        </button>
+                    )}
                     {isOfficial && recipe.videoId && <div className="w-full aspect-video bg-black relative"><iframe width="100%" height="100%" src={getYoutubeEmbedUrl(recipe.videoId)} frameBorder="0" className="pointer-events-none"></iframe></div>}
                     <div className="p-4">
                         <div className="flex justify-between items-start mb-2">
@@ -395,14 +463,40 @@
             const [baristaMode, setBaristaMode] = useState(false);
             const [viewMode, setViewMode] = useState('normal');
             const [selectedRecipe, setSelectedRecipe] = useState(null);
+            const [recipeToEdit, setRecipeToEdit] = useState(null);
 
             useEffect(() => {
                 const unsub = db.collection('recipes').orderBy('createdAt', 'desc').onSnapshot(snap => setRecipes(snap.docs.map(d => ({id:d.id, ...d.data()}))), e => console.log(e));
                 return () => unsub();
             }, []);
 
+            const handleEditRecipe = (recipe) => {
+                setRecipeToEdit(recipe);
+                setViewMode('admin');
+            };
+
             const renderContent = () => {
-                if (viewMode === 'admin') return <AdminRecipeForm onSave={async (r) => { try { await db.collection('recipes').add({...r, createdAt: new Date(), author: 'Moka Clube'}); setViewMode('normal'); setActiveTab('home'); } catch(e){ alert(e.message); } }} onCancel={() => setViewMode('normal')} />;
+                if (viewMode === 'admin') {
+                    return <AdminRecipeForm 
+                        initialData={recipeToEdit}
+                        onSave={async (r) => { 
+                            try { 
+                                if (r.id) {
+                                    // Update existing
+                                    await db.collection('recipes').doc(r.id).update({...r});
+                                } else {
+                                    // Create new
+                                    await db.collection('recipes').add({...r, createdAt: new Date(), author: 'Moka Clube'}); 
+                                }
+                                setViewMode('normal'); 
+                                setActiveTab('home'); 
+                                setRecipeToEdit(null);
+                            } catch(e){ alert(e.message); } 
+                        }} 
+                        onCancel={() => { setViewMode('normal'); setRecipeToEdit(null); }} 
+                    />;
+                }
+
                 switch (activeTab) {
                     case 'timer': return <TimerView />;
                     case 'sensory': return <SensoryWheel />;
@@ -452,9 +546,18 @@
                             </div>
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className={`font-bold text-lg ${THEME.textMain}`}>Receitas Oficiais</h3>
-                                {baristaMode && <button onClick={() => setViewMode('admin')} className={`flex items-center gap-1 ${THEME.accentText} text-xs font-bold border border-current px-2 py-1 rounded-full animate-pulse`}><Icon name="plus-circle" size={14} /> NOVA</button>}
+                                {baristaMode && <button onClick={() => { setRecipeToEdit(null); setViewMode('admin'); }} className={`flex items-center gap-1 ${THEME.accentText} text-xs font-bold border border-current px-2 py-1 rounded-full animate-pulse`}><Icon name="plus-circle" size={14} /> NOVA</button>}
                             </div>
-                            {[...recipes, ...INITIAL_OFFICIAL_RECIPES].filter((v,i,a)=>a.findIndex(v2=>(v2.id===v.id))===i).map(recipe => <RecipeCard key={recipe.id} recipe={recipe} isOfficial={true} onViewDetail={setSelectedRecipe} />)}
+                            {[...recipes, ...INITIAL_OFFICIAL_RECIPES].filter((v,i,a)=>a.findIndex(v2=>(v2.id===v.id))===i).map(recipe => (
+                                <RecipeCard 
+                                    key={recipe.id} 
+                                    recipe={recipe} 
+                                    isOfficial={true} 
+                                    onViewDetail={setSelectedRecipe} 
+                                    baristaMode={baristaMode}
+                                    onEdit={handleEditRecipe}
+                                />
+                            ))}
                         </div>
                     );
                 }
