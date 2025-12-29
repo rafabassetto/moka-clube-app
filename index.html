@@ -9,46 +9,52 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     
-    <!-- Babel para traduzir JSX -->
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            safelist: [
+                'bg-red-600', 'text-red-600', 'bg-red-50',
+                'bg-zinc-900', 'text-zinc-900', 'bg-zinc-800', 'text-zinc-400', 'border-zinc-700', 'text-white',
+                'bg-yellow-500', 'text-yellow-500',
+                'bg-stone-100', 'text-stone-800', 'text-stone-500', 'bg-green-700', 'text-green-700', 'bg-[#fdfbf7]', 'text-[#fdfbf7]'
+            ],
+            theme: {
+                extend: {
+                    colors: {
+                        moka: '#DC2626',
+                    }
+                }
+            }
+        }
+    </script>
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://unpkg.com/lucide-react/dist/lucide-react.min.js"></script>
 
-    <!-- FIREBASE SDK (Compat Version para HTML simples) -->
+    <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <style>
-        /* Esconder scrollbar mas manter funcionalidade */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .animate-spin-slow {
-            animation: spin 3s linear infinite;
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .animate-spin-slow { animation: spin 3s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.2s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        // Importando React hooks do global
         const { useState, useEffect, useRef } = React;
 
-        // --- CONFIGURAÇÃO DO FIREBASE ---
+        // --- FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyDnElIN9JV7OtApqh4orYVXjdpr41jtyHc",
             authDomain: "moka-clube-app.firebaseapp.com",
@@ -58,93 +64,40 @@
             appId: "1:921502412834:web:f72730a5f7444cb440da7b"
         };
 
-        // Inicializando Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // --- COMPONENTES DE ÍCONE ---
-        const Icon = ({ name, size = 24, className, ...props }) => {
-            const lucideIcons = window.lucide ? window.lucide.icons : {};
-            const IconComponent = lucideIcons[name];
-            // Fallback simples se lucide não carregar
-            if (!IconComponent) return <span className="text-xs">Icon</span>;
-            
-            return (
-                <i data-lucide={name} className={className} width={size} height={size} {...props}></i>
-            );
-        };
-
-        // Mapeamento de componentes
-        const Coffee = (props) => <Icon name="Coffee" {...props} />;
-        const Timer = (props) => <Icon name="Timer" {...props} />;
-        const Users = (props) => <Icon name="Users" {...props} />;
-        const PlusCircle = (props) => <Icon name="PlusCircle" {...props} />;
-        const Heart = (props) => <Icon name="Heart" {...props} />;
-        const Clock = (props) => <Icon name="Clock" {...props} />;
-        const Droplet = (props) => <Icon name="Droplet" {...props} />;
-        const Thermometer = (props) => <Icon name="Thermometer" {...props} />;
-        const ChevronRight = (props) => <Icon name="ChevronRight" {...props} />;
-        const Play = (props) => <Icon name="Play" {...props} />;
-        const Pause = (props) => <Icon name="Pause" {...props} />;
-        const RotateCcw = (props) => <Icon name="RotateCcw" {...props} />;
-        const Search = (props) => <Icon name="Search" {...props} />;
-        const Award = (props) => <Icon name="Award" {...props} />;
-        const Settings = (props) => <Icon name="Settings" {...props} />;
-        const Star = (props) => <Icon name="Star" {...props} />;
-        const Zap = (props) => <Icon name="Zap" {...props} />;
-        const MapPin = (props) => <Icon name="MapPin" {...props} />;
-        const BarChart2 = (props) => <Icon name="BarChart2" {...props} />;
-        const Youtube = (props) => <Icon name="Youtube" {...props} />;
-        const Save = (props) => <Icon name="Save" {...props} />;
-        const Shield = (props) => <Icon name="Shield" {...props} />;
-        const Loader = (props) => <Icon name="Loader" {...props} />;
-
-        // --- DADOS E TEMAS ---
+        // --- CONFIGURAÇÃO DE TEMAS ---
         const THEMES = {
             classic: {
-                id: 'classic',
-                name: 'Moka Classic',
-                bg: 'bg-gray-50',
-                cardBg: 'bg-white',
-                textMain: 'text-zinc-900',
-                textSec: 'text-gray-500',
-                accent: 'bg-red-600',
-                accentText: 'text-red-600',
-                navBg: 'bg-white',
-                headerBg: 'bg-zinc-900',
-                headerText: 'text-white'
+                id: 'classic', name: 'Moka Classic',
+                bg: 'bg-gray-50', cardBg: 'bg-white',
+                textMain: 'text-zinc-900', textSec: 'text-gray-500',
+                accent: 'bg-red-600', accentText: 'text-red-600',
+                navBg: 'bg-white', headerBg: 'bg-zinc-900', headerText: 'text-white'
             },
             dark: {
-                id: 'dark',
-                name: 'Midnight Roast',
-                bg: 'bg-zinc-900',
-                cardBg: 'bg-zinc-800',
-                textMain: 'text-white',
-                textSec: 'text-zinc-400',
-                accent: 'bg-yellow-500',
-                accentText: 'text-yellow-500',
-                navBg: 'bg-zinc-900',
-                headerBg: 'bg-black',
-                headerText: 'text-white'
+                id: 'dark', name: 'Midnight Roast',
+                bg: 'bg-zinc-900', cardBg: 'bg-zinc-800',
+                textMain: 'text-white', textSec: 'text-zinc-400',
+                accent: 'bg-yellow-500', accentText: 'text-yellow-500',
+                navBg: 'bg-zinc-900', headerBg: 'bg-black', headerText: 'text-white'
             },
             nature: {
-                id: 'nature',
-                name: 'Fazenda',
-                bg: 'bg-stone-100',
-                cardBg: 'bg-[#fdfbf7]',
-                textMain: 'text-stone-800',
-                textSec: 'text-stone-500',
-                accent: 'bg-green-700',
-                accentText: 'text-green-700',
-                navBg: 'bg-[#fdfbf7]',
-                headerBg: 'bg-stone-800',
-                headerText: 'text-[#fdfbf7]'
+                id: 'nature', name: 'Fazenda',
+                bg: 'bg-stone-100', cardBg: 'bg-[#fdfbf7]',
+                textMain: 'text-stone-800', textSec: 'text-stone-500',
+                accent: 'bg-green-700', accentText: 'text-green-700',
+                navBg: 'bg-[#fdfbf7]', headerBg: 'bg-stone-800', headerText: 'text-[#fdfbf7]'
             }
         };
 
-        // Receitas Iniciais (Fallback)
+        // --- COMPONENTE DE ÍCONE ---
+        const Icon = ({ name, size = 24, className }) => {
+            return <i data-lucide={name} className={className} style={{ width: size, height: size, display: 'inline-block' }}></i>;
+        };
+
+        // --- DADOS MOCK (RECUPERADOS) ---
         const INITIAL_OFFICIAL_RECIPES = [
             {
                 id: 'static-1',
@@ -157,7 +110,13 @@
                 likes: 342,
                 difficulty: "Média",
                 temp: "93°C",
-                videoId: "w2-S7Ww2rSc"
+                videoId: "w2-S7Ww2rSc",
+                steps: [
+                    { time: 0, text: "Hidrate o filtro e adicione 20g de café." },
+                    { time: 0, text: "Inicie o timer. Faça o bloom com 50g de água." },
+                    { time: 30, text: "Despeje suavemente até atingir 200g." },
+                    { time: 90, text: "Complete até 320g e aguarde finalizar." }
+                ]
             }
         ];
 
@@ -167,21 +126,21 @@
         ];
 
         const BREW_METHODS = [
-            { name: "Hario V60", icon: "V60", defaultTime: 180 },
-            { name: "Prensa Francesa", icon: "PF", defaultTime: 240 },
-            { name: "Aeropress", icon: "AP", defaultTime: 120 },
-            { name: "Chemex", icon: "CH", defaultTime: 210 },
-            { name: "Koar", icon: "KR", defaultTime: 180 },
+            { name: "Hario V60", icon: "coffee", defaultTime: 180 },
+            { name: "Prensa Francesa", icon: "container", defaultTime: 240 },
+            { name: "Aeropress", icon: "arrow-down-circle", defaultTime: 120 },
+            { name: "Chemex", icon: "flask-conical", defaultTime: 210 },
+            { name: "Koar", icon: "triangle", defaultTime: 180 },
         ];
 
         const BADGES = [
-            { id: 1, name: "Pioneiro do Norte", iconName: "MapPin", desc: "Provou 5 cafés do PR", earned: true },
-            { id: 2, name: "Alquimista V60", iconName: "Coffee", desc: "10 receitas criadas", earned: true },
-            { id: 3, name: "Caçador de Acidez", iconName: "Zap", desc: "Avaliou 5 cafés cítricos", earned: false },
-            { id: 4, name: "Mestre da Prensa", iconName: "Timer", desc: "Usou timer 50x", earned: false },
+            { id: 1, name: "Pioneiro do Norte", iconName: "map-pin", desc: "Provou 5 cafés do PR", earned: true },
+            { id: 2, name: "Alquimista V60", iconName: "coffee", desc: "10 receitas criadas", earned: true },
+            { id: 3, name: "Caçador de Acidez", iconName: "zap", desc: "Avaliou 5 cafés cítricos", earned: false },
+            { id: 4, name: "Mestre da Prensa", iconName: "timer", desc: "Usou timer 50x", earned: false },
         ];
 
-        // --- FUNÇÕES AUXILIARES ---
+        // --- AUXILIARES ---
         const getYoutubeEmbedUrl = (videoId) => `https://www.youtube.com/embed/${videoId}`;
         const extractVideoId = (url) => {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -191,62 +150,80 @@
 
         // --- COMPONENTES ---
 
-        const AdminRecipeForm = ({ theme, onSave, onCancel, isSaving }) => {
-            const [formData, setFormData] = useState({
-                title: '', region: '', method: 'Hario V60', ratio: '1:16', temp: '93°C', notes: '', videoUrl: ''
-            });
+        const RecipeDetailModal = ({ recipe, onClose, theme }) => {
+            if (!recipe) return null;
+            return (
+                <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
+                    <div className={`${theme.cardBg} w-full max-w-md h-[90vh] sm:h-auto sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl flex flex-col shadow-2xl overflow-hidden`}>
+                        <div className={`flex justify-between items-center p-4 border-b ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-100'}`}>
+                            <div><h3 className={`font-bold text-lg ${theme.textMain}`}>{recipe.title}</h3><p className={`text-xs ${theme.textSec}`}>por {recipe.author}</p></div>
+                            <button onClick={onClose} className={`p-2 rounded-full hover:bg-black/10 ${theme.textMain}`}><Icon name="x" size={20} /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                            {recipe.videoId && (
+                                <div className="rounded-xl overflow-hidden shadow-lg bg-black aspect-video">
+                                    <iframe width="100%" height="100%" src={getYoutubeEmbedUrl(recipe.videoId)} frameBorder="0" allowFullScreen></iframe>
+                                </div>
+                            )}
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className={`p-3 rounded-lg text-center border ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-100'}`}>
+                                    <div className={`mx-auto mb-1 ${theme.accentText} flex justify-center`}><Icon name="droplet" size={16} /></div>
+                                    <span className={`block text-xs font-bold ${theme.textMain}`}>{recipe.ratio || '1:16'}</span><span className="text-[10px] text-gray-400">Ratio</span>
+                                </div>
+                                <div className={`p-3 rounded-lg text-center border ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-100'}`}>
+                                    <div className={`mx-auto mb-1 ${theme.accentText} flex justify-center`}><Icon name="thermometer" size={16} /></div>
+                                    <span className={`block text-xs font-bold ${theme.textMain}`}>{recipe.temp || '93°C'}</span><span className="text-[10px] text-gray-400">Temp</span>
+                                </div>
+                                <div className={`p-3 rounded-lg text-center border ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-100'}`}>
+                                    <div className={`mx-auto mb-1 ${theme.accentText} flex justify-center`}><Icon name="chef-hat" size={16} /></div>
+                                    <span className={`block text-xs font-bold ${theme.textMain}`}>{recipe.difficulty || 'Fácil'}</span><span className="text-[10px] text-gray-400">Nível</span>
+                                </div>
+                            </div>
+                            <div className={`p-4 rounded-lg ${theme.id === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'}`}>
+                                <h4 className={`text-sm font-bold mb-2 ${theme.textMain}`}>Notas do Barista</h4>
+                                <p className={`text-sm ${theme.textSec} italic`}>"{recipe.notes || recipe.desc || 'Sem notas.'}"</p>
+                            </div>
+                            <div>
+                                <h4 className={`text-sm font-bold mb-3 ${theme.textMain}`}>Passo a Passo</h4>
+                                <div className="space-y-4 relative pl-4 border-l-2 border-gray-200">
+                                    {recipe.steps && recipe.steps.length > 0 ? recipe.steps.map((step, idx) => (
+                                        <div key={idx} className="relative">
+                                            <div className={`absolute -left-[21px] top-0 w-4 h-4 rounded-full ${theme.accent} border-2 border-white`}></div>
+                                            <span className={`text-xs font-bold ${theme.accentText} uppercase tracking-wider block mb-1`}>{step.time > 0 ? `${step.time}s` : 'Início'}</span>
+                                            <p className={`text-sm ${theme.textMain}`}>{step.text || step.instructions}</p>
+                                        </div>
+                                    )) : <p className={`text-sm ${theme.textSec}`}>Siga o método padrão {recipe.method}.</p>}
+                                </div>
+                            </div>
+                        </div>
+                        <div className={`p-4 border-t ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-100'}`}>
+                            <button onClick={onClose} className={`w-full py-3 rounded-xl font-bold text-white ${theme.accent} shadow-lg`}>Preparar Agora</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
+        const AdminRecipeForm = ({ theme, onSave, onCancel, isSaving }) => {
+            const [formData, setFormData] = useState({ title: '', region: '', method: 'Hario V60', ratio: '1:16', temp: '93°C', notes: '', videoUrl: '' });
             const handleSubmit = () => {
                 const videoId = formData.videoUrl ? extractVideoId(formData.videoUrl) : '';
-                onSave({ ...formData, videoId, author: 'Moka Clube', likes: 0 });
+                const defaultSteps = [{ time: 0, text: "Escalde o filtro e adicione o café." }, { time: 0, text: "Inicie o timer e faça o bloom." }, { time: 45, text: "Despeje o restante da água." }];
+                onSave({ ...formData, videoId, author: 'Moka Clube', likes: 0, steps: defaultSteps });
             };
-
             return (
                 <div className={`p-4 ${theme.bg} min-h-screen pb-24`}>
-                    <div className="flex items-center gap-2 mb-6">
-                        <Shield className={theme.accentText} size={24} />
-                        <h2 className={`text-xl font-bold ${theme.textMain}`}>Nova Receita Oficial</h2>
-                    </div>
+                    <div className="flex items-center gap-2 mb-6"><div className={theme.accentText}><Icon name="shield" size={24} /></div><h2 className={`text-xl font-bold ${theme.textMain}`}>Nova Receita Oficial</h2></div>
                     <div className={`${theme.cardBg} p-5 rounded-xl border ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-200'} space-y-4`}>
-                        <div>
-                            <label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Nome do Café</label>
-                            <input type="text" className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} placeholder="Ex: Catuaí Amarelo..." value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Região</label>
-                            <input type="text" className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} placeholder="Ex: Chapada Diamantina, BA" value={formData.region} onChange={e => setFormData({...formData, region: e.target.value})} />
-                        </div>
+                        <div><label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Nome do Café</label><input type="text" className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} placeholder="Ex: Catuaí..." value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
+                        <div><label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Região</label><input type="text" className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} placeholder="Ex: Chapada..." value={formData.region} onChange={e => setFormData({...formData, region: e.target.value})} /></div>
                         <div className="flex gap-2">
-                            <div className="flex-1">
-                                <label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Método</label>
-                                <select className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} value={formData.method} onChange={e => setFormData({...formData, method: e.target.value})}>
-                                    {BREW_METHODS.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
-                                </select>
-                            </div>
-                            <div className="w-1/3">
-                                <label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Temp.</label>
-                                <input type="text" className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} placeholder="93°C" value={formData.temp} onChange={e => setFormData({...formData, temp: e.target.value})} />
-                            </div>
+                            <div className="flex-1"><label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Método</label><select className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} value={formData.method} onChange={e => setFormData({...formData, method: e.target.value})}>{BREW_METHODS.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}</select></div>
+                            <div className="w-1/3"><label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Temp.</label><input type="text" className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} value={formData.temp} onChange={e => setFormData({...formData, temp: e.target.value})} /></div>
                         </div>
-                        <div>
-                            <label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase flex items-center gap-1`}><Youtube size={14} /> Link do Vídeo</label>
-                            <input type="text" className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} placeholder="Link do YouTube" value={formData.videoUrl} onChange={e => setFormData({...formData, videoUrl: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Notas Sensoriais</label>
-                            <textarea className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} rows="3" placeholder="Descreva o sabor..." value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea>
-                        </div>
-                        <div className="flex gap-3 pt-2">
-                            <button onClick={onCancel} className={`flex-1 py-3 rounded-lg font-bold text-sm ${theme.textSec} border border-transparent hover:bg-black/5`}>Cancelar</button>
-                            <button 
-                                onClick={handleSubmit} 
-                                disabled={isSaving}
-                                className={`flex-1 py-3 rounded-lg font-bold text-sm text-white ${theme.accent} shadow-md flex items-center justify-center gap-2 ${isSaving ? 'opacity-70' : ''}`}
-                            >
-                                {isSaving ? <span className="animate-spin mr-1">⏳</span> : <Save size={16} />} 
-                                {isSaving ? 'Salvando...' : 'Publicar'}
-                            </button>
-                        </div>
+                        <div><label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase flex items-center gap-1`}><Icon name="youtube" size={14} /> Link Vídeo</label><input type="text" className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} placeholder="YouTube Link" value={formData.videoUrl} onChange={e => setFormData({...formData, videoUrl: e.target.value})} /></div>
+                        <div><label className={`block text-xs font-bold ${theme.textSec} mb-1 uppercase`}>Notas</label><textarea className={`w-full p-2 rounded border ${theme.id === 'dark' ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-gray-300'} text-sm`} rows="3" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea></div>
+                        <div className="flex gap-3 pt-2"><button onClick={onCancel} className={`flex-1 py-3 rounded-lg font-bold text-sm ${theme.textSec} border border-transparent`}>Cancelar</button><button onClick={handleSubmit} disabled={isSaving} className={`flex-1 py-3 rounded-lg font-bold text-sm text-white ${theme.accent} shadow-md flex items-center justify-center gap-2`}>{isSaving ? '...' : 'Publicar'}</button></div>
                     </div>
                 </div>
             );
@@ -272,7 +249,7 @@
             return (
                 <div className={`p-6 rounded-2xl ${theme.cardBg} shadow-sm border border-gray-100 mb-6`}>
                     <div className="flex items-center gap-2 mb-4">
-                        <BarChart2 size={20} className={theme.accentText} />
+                        <div className={theme.accentText}><Icon name="bar-chart-2" size={20} /></div>
                         <h3 className={`font-bold text-lg ${theme.textMain}`}>Roda Sensorial</h3>
                     </div>
                     <div className="flex flex-col md:flex-row gap-8 items-center">
@@ -304,84 +281,56 @@
         const Header = ({ theme, baristaMode }) => (
             <header className={`${theme.headerBg} ${theme.headerText} p-4 sticky top-0 z-50 shadow-md flex justify-between items-center transition-colors duration-300`}>
                 <div className="flex items-center gap-2">
-                    <div className={`${theme.accent} p-1.5 rounded-lg`}><Coffee size={20} className="text-white" /></div>
+                    <div className={`${theme.accent} p-1.5 rounded-lg`}><Icon name="coffee" size={20} className="text-white" /></div>
                     <h1 className="font-bold text-lg tracking-wider">MOKA <span className="font-light opacity-70">APP</span></h1>
                 </div>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border relative ${theme.id === 'nature' ? 'bg-stone-600 border-stone-500' : 'bg-zinc-700 border-zinc-600'}`}>
-                    {baristaMode ? <Shield size={14} className="text-yellow-400" /> : "MC"}
+                    {baristaMode ? <Icon name="shield" size={14} className="text-yellow-400" /> : "MC"}
                 </div>
             </header>
         );
 
-        const RecipeCard = ({ recipe, isOfficial, theme }) => (
-            <div className={`${theme.cardBg} rounded-xl shadow-sm border border-opacity-50 border-gray-200 overflow-hidden mb-4 hover:shadow-md transition-all`}>
-                {isOfficial && recipe.videoId && (
-                    <div className="w-full aspect-video bg-black relative">
-                        <iframe width="100%" height="100%" src={getYoutubeEmbedUrl(recipe.videoId)} title={recipe.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="absolute inset-0"></iframe>
-                    </div>
-                )}
-                <div className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${isOfficial ? `${theme.headerBg} ${theme.headerText}` : 'bg-gray-100 text-gray-600'}`}>{recipe.method}</span>
-                        <div className={`flex items-center gap-1 ${theme.textSec} text-sm`}><Heart size={14} /><span>{recipe.likes}</span></div>
-                    </div>
-                    <h3 className={`font-bold text-lg ${theme.textMain} leading-tight mb-1`}>{recipe.title}</h3>
-                    {isOfficial && <p className={`text-xs ${theme.accentText} font-bold mb-2 uppercase tracking-wide`}>{recipe.region}</p>}
-                    {!isOfficial && <p className={`text-xs ${theme.textSec} mb-2`}>por {recipe.author} • {recipe.coffee}</p>}
-                    <p className={`text-sm ${theme.textSec} mb-4 line-clamp-2`}>{isOfficial ? recipe.notes : recipe.desc}</p>
-                    {isOfficial && (
-                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 border-opacity-50">
-                            <div className={`flex gap-4 text-xs ${theme.textSec} font-medium`}>
-                                <span className="flex items-center gap-1"><Droplet size={12}/> {recipe.ratio}</span>
-                                <span className="flex items-center gap-1"><Thermometer size={12}/> {recipe.temp}</span>
-                            </div>
-                            <button className={`${theme.accentText} text-sm font-bold flex items-center gap-1 hover:brightness-110`}>Ver Receita <ChevronRight size={16} /></button>
+        const RecipeCard = ({ recipe, isOfficial, theme, onViewDetail }) => {
+            const [likes, setLikes] = useState(recipe.likes || 0);
+            const [liked, setLiked] = useState(false);
+            const handleLike = async (e) => {
+                e.stopPropagation();
+                if (liked) return;
+                setLikes(prev => prev + 1);
+                setLiked(true);
+                if (isOfficial && recipe.id && !recipe.id.startsWith('static')) {
+                    try { await db.collection('recipes').doc(recipe.id).update({ likes: firebase.firestore.FieldValue.increment(1) }); } catch(e) {}
+                }
+            };
+            return (
+                <div onClick={() => onViewDetail(recipe)} className={`cursor-pointer ${theme.cardBg} rounded-xl shadow-sm border border-opacity-50 border-gray-200 overflow-hidden mb-4 hover:shadow-md transition-all`}>
+                    {isOfficial && recipe.videoId && <div className="w-full aspect-video bg-black relative"><iframe width="100%" height="100%" src={getYoutubeEmbedUrl(recipe.videoId)} frameBorder="0" className="pointer-events-none"></iframe></div>}
+                    <div className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${isOfficial ? `${theme.headerBg} ${theme.headerText}` : 'bg-gray-100 text-gray-600'}`}>{recipe.method}</span>
+                            <button onClick={handleLike} className={`flex items-center gap-1 ${liked ? 'text-red-500' : theme.textSec} text-sm`}><Icon name="heart" size={14} className={liked ? "fill-current" : ""} /><span>{likes}</span></button>
                         </div>
-                    )}
-                    {!isOfficial && (
-                        <div className="flex items-center justify-between mt-2">
-                            <div className="flex -space-x-2"><div className="w-6 h-6 rounded-full bg-gray-300 border-2 border-white"></div><div className="w-6 h-6 rounded-full bg-gray-400 border-2 border-white"></div></div>
-                            <button className={`${theme.textMain} text-sm font-bold`}>Ler</button>
-                        </div>
-                    )}
+                        <h3 className={`font-bold text-lg ${theme.textMain} leading-tight mb-1`}>{recipe.title}</h3>
+                        {isOfficial ? <p className={`text-xs ${theme.accentText} font-bold mb-2 uppercase tracking-wide`}>{recipe.region}</p> : <p className={`text-xs ${theme.textSec} mb-2`}>por {recipe.author}</p>}
+                        <p className={`text-sm ${theme.textSec} mb-4 line-clamp-2`}>{isOfficial ? recipe.notes : recipe.desc}</p>
+                        {isOfficial && <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 border-opacity-50"><div className={`flex gap-4 text-xs ${theme.textSec} font-medium`}><span className="flex items-center gap-1"><Icon name="droplet" size={12}/> {recipe.ratio}</span><span className="flex items-center gap-1"><Icon name="thermometer" size={12}/> {recipe.temp}</span></div><span className={`${theme.accentText} text-sm font-bold flex items-center gap-1`}>Ver <Icon name="chevron-right" size={16} /></span></div>}
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        };
 
         const TimerView = ({ theme }) => {
             const [activeMethod, setActiveMethod] = useState(BREW_METHODS[0]);
             const [time, setTime] = useState(0);
             const [isActive, setIsActive] = useState(false);
-
-            useEffect(() => {
-                let interval = null;
-                if (isActive) interval = setInterval(() => setTime((time) => time + 1), 1000);
-                else if (!isActive && time !== 0) clearInterval(interval);
-                return () => clearInterval(interval);
-            }, [isActive, time]);
-
-            const toggleTimer = () => setIsActive(!isActive);
-            const resetTimer = () => { setIsActive(false); setTime(0); };
-            const formatTime = (seconds) => {
-                const mins = Math.floor(seconds / 60);
-                const secs = seconds % 60;
-                return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-            };
-            const getCurrentInstruction = () => {
-                if (time < 30) return { title: "Bloom", desc: "Molhe todo o pó com 50g de água" };
-                if (time < 90) return { title: "Despejo Principal", desc: "Movimentos circulares lentos" };
-                if (time < 150) return { title: "Finalização", desc: "Mantenha o nível da água" };
-                return { title: "Extração Final", desc: "Aguarde terminar de pingar" };
-            };
-            const currentInstruction = getCurrentInstruction();
-
+            useEffect(() => { let i; if(isActive) i = setInterval(() => setTime(t => t+1), 1000); return () => clearInterval(i); }, [isActive]);
             return (
                 <div className="p-4 pb-24">
                     <h2 className={`text-xl font-bold mb-4 ${theme.textMain}`}>Barista de Bolso</h2>
                     <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar mb-4">
-                        {BREW_METHODS.map((m) => (
-                            <button key={m.name} onClick={() => { setActiveMethod(m); resetTimer(); }} className={`flex flex-col items-center justify-center min-w-[80px] h-20 rounded-xl border transition-all ${activeMethod.name === m.name ? `${theme.headerBg} ${theme.headerText} border-transparent shadow-lg` : `${theme.cardBg} ${theme.textSec} border-gray-200`}`}>
-                                <span className="text-lg font-bold mb-1">{m.name === "Hario V60" ? "V60" : m.name.substring(0,2)}</span>
+                        {BREW_METHODS.map(m => (
+                            <button key={m.name} onClick={() => { setActiveMethod(m); setTime(0); setIsActive(false); }} className={`flex flex-col items-center justify-center min-w-[80px] h-20 rounded-xl border transition-all ${activeMethod.name === m.name ? `${theme.headerBg} ${theme.headerText} border-transparent shadow-lg` : `${theme.cardBg} ${theme.textSec} border-gray-200`}`}>
+                                <Icon name={m.icon} size={24} className="mb-1" />
                                 <span className="text-[10px] uppercase font-bold tracking-wider">{m.name.split(' ')[0]}</span>
                             </button>
                         ))}
@@ -390,179 +339,84 @@
                         <div className="relative w-64 h-64 flex items-center justify-center">
                             <div className={`absolute w-full h-full rounded-full border-4 ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-200'}`}></div>
                             <div className={`absolute w-full h-full rounded-full border-4 border-t-current border-r-current transition-all duration-1000 ${isActive ? 'animate-spin-slow' : ''} ${theme.accentText}`} style={{ borderRightColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: 'transparent' }}></div>
-                            <div className="text-center z-10">
-                                <div className={`text-6xl font-black ${theme.textMain} tabular-nums`}>{formatTime(time)}</div>
-                                <div className={`font-medium text-sm mt-1 uppercase tracking-widest ${theme.textSec}`}>{isActive ? 'Extraindo' : 'Pronto'}</div>
-                            </div>
+                            <div className="text-center z-10"><div className={`text-6xl font-black ${theme.textMain} tabular-nums`}>{Math.floor(time/60)}:{(time%60).toString().padStart(2,'0')}</div><div className={`font-medium text-sm mt-1 uppercase tracking-widest ${theme.textSec}`}>{isActive ? 'Extraindo' : 'Pronto'}</div></div>
                         </div>
                     </div>
-                    <div className={`${theme.cardBg} border ${theme.id === 'dark' ? 'border-zinc-700' : 'border-red-100'} p-4 rounded-xl mb-8 text-center transition-all shadow-sm`}>
-                        <h3 className={`font-bold text-lg ${theme.accentText}`}>{currentInstruction.title}</h3>
-                        <p className={`${theme.textSec} text-sm opacity-90`}>{currentInstruction.desc}</p>
-                    </div>
                     <div className="flex justify-center gap-6">
-                        <button onClick={resetTimer} className={`w-14 h-14 rounded-full flex items-center justify-center hover:opacity-80 ${theme.id === 'dark' ? 'bg-zinc-800 text-white' : 'bg-gray-200 text-gray-600'}`}><RotateCcw size={24} /></button>
-                        <button onClick={toggleTimer} className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-95 ${isActive ? `${theme.headerBg} ${theme.headerText}` : `${theme.accent} text-white`}`}>{isActive ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}</button>
+                        <button onClick={() => {setIsActive(false); setTime(0);}} className={`w-14 h-14 rounded-full flex items-center justify-center hover:opacity-80 ${theme.id === 'dark' ? 'bg-zinc-800 text-white' : 'bg-gray-200 text-gray-600'}`}><Icon name="rotate-ccw" size={24} /></button>
+                        <button onClick={() => setIsActive(!isActive)} className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-95 ${isActive ? `${theme.headerBg} ${theme.headerText}` : `${theme.accent} text-white`}`}>{isActive ? <Icon name="pause" size={32} /> : <Icon name="play" size={32} className="ml-1" />}</button>
                     </div>
                 </div>
             );
         };
 
-        const FeedView = ({ theme, goToRecipe, recipes, baristaMode, setView, isLoading }) => (
-            <div className="p-4 pb-24">
-                <div className={`${theme.headerBg} rounded-2xl p-5 mb-6 text-white relative overflow-hidden shadow-lg border border-zinc-800`}>
-                    <div className={`absolute top-0 right-0 w-32 h-32 ${theme.accent} rounded-full blur-3xl opacity-30 translate-x-10 -translate-y-10`}></div>
-                    <span className={`${theme.accent} text-[10px] font-bold px-2 py-1 rounded mb-2 inline-block text-white`}>CLUBE DE ASSINATURA</span>
-                    <h2 className="relative z-10 text-xl font-bold mb-1">Café do Mês: Piatã</h2>
-                    <p className="relative z-10 text-gray-300 text-sm mb-4 max-w-[80%]">Direto da Chapada Diamantina, notas de melaço.</p>
-                    <button onClick={goToRecipe} className={`relative z-10 ${theme.cardBg} ${theme.textMain} px-4 py-2 rounded-lg text-sm font-bold hover:brightness-90 transition-colors`}>Avaliar este Café</button>
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className={`font-bold text-lg ${theme.textMain}`}>Receitas Oficiais</h3>
-                    {baristaMode ? (
-                        <button onClick={() => setView('admin')} className={`flex items-center gap-1 ${theme.accentText} text-xs font-bold border border-current px-2 py-1 rounded-full animate-pulse`}><PlusCircle size={14} /> ADICIONAR NOVA</button>
-                    ) : (
-                        <button className={`${theme.accentText} text-sm font-bold`}>Ver todas</button>
-                    )}
-                </div>
-                {isLoading && (
-                    <div className="text-center py-4 text-gray-400">
-                         <span className="animate-spin inline-block mr-2">⏳</span> Carregando receitas do clube...
-                    </div>
-                )}
-                {/* Mesclar receitas estáticas iniciais com as do Firebase */}
-                {[...recipes, ...INITIAL_OFFICIAL_RECIPES].filter((v,i,a)=>a.findIndex(v2=>(v2.id===v.id))===i).map(recipe => <RecipeCard key={recipe.id} recipe={recipe} isOfficial={true} theme={theme} />)}
-            </div>
-        );
-
-        const CommunityView = ({ theme }) => (
-            <div className="p-4 pb-24">
-                <div className={`flex items-center gap-2 mb-6 ${theme.cardBg} border ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-200'} p-2 rounded-lg`}>
-                    <Search size={20} className="text-gray-400 ml-2" />
-                    <input type="text" placeholder="Buscar receitas..." className={`bg-transparent w-full p-1 outline-none ${theme.textMain} text-sm`} />
-                </div>
-                <div className="flex justify-between items-end mb-4">
-                    <div><h3 className={`font-bold text-xl ${theme.textMain}`}>Comunidade Moka</h3><p className={`text-xs ${theme.textSec}`}>O que os membros estão bebendo</p></div>
-                    <button className={`${theme.headerBg} ${theme.headerText} p-2 rounded-full shadow-lg`}><PlusCircle size={24} /></button>
-                </div>
-                {COMMUNITY_RECIPES.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} isOfficial={false} theme={theme} />)}
-            </div>
-        );
-
-        const ProfileView = ({ theme, setTheme, baristaMode, setBaristaMode }) => (
-            <div className="p-4 pb-24">
-                <div className={`${theme.cardBg} rounded-xl p-6 shadow-sm border ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-100'} mb-6 text-center`}>
-                    <div className="w-20 h-20 bg-gray-300 rounded-full mx-auto mb-3 overflow-hidden border-4 border-white shadow-sm flex items-center justify-center text-4xl">👨‍🦲</div>
-                    <h2 className={`font-bold text-xl ${theme.textMain}`}>Sócio Fundador</h2>
-                    <p className={`text-sm ${theme.textSec} mb-4`}>Membro desde 2012</p>
-                    <div className="flex justify-center gap-8 border-t border-gray-100 pt-4">
-                        <div className="text-center"><span className={`block font-bold text-lg ${theme.accentText}`}>1,250</span><span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Pontos</span></div>
-                        <div className="text-center"><span className={`block font-bold text-lg ${theme.textMain}`}>Nível 5</span><span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Mestre</span></div>
-                    </div>
-                </div>
-                <div className={`mb-6 p-4 rounded-xl border-2 border-dashed ${baristaMode ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200'} transition-all`}>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3"><div className={`p-2 rounded-full ${baristaMode ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-400'}`}><Shield size={20} /></div><div><h4 className={`font-bold text-sm ${baristaMode ? 'text-zinc-900' : theme.textMain}`}>Modo Barista (Admin)</h4><p className="text-[10px] text-gray-500">Habilita envio de receitas</p></div></div>
-                        <button onClick={() => setBaristaMode(!baristaMode)} className={`px-3 py-1 rounded-full text-xs font-bold ${baristaMode ? 'bg-zinc-900 text-white' : 'bg-gray-200 text-gray-500'}`}>{baristaMode ? 'ATIVO' : 'OFF'}</button>
-                    </div>
-                </div>
-                <div className="mb-8">
-                    <h3 className={`font-bold text-lg ${theme.textMain} mb-4 flex items-center gap-2`}><Award className={theme.accentText} size={20}/> Conquistas</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        {BADGES.map(badge => (
-                            <div key={badge.id} className={`${theme.cardBg} p-3 rounded-lg border ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-100'} flex items-start gap-3 ${!badge.earned ? 'opacity-50 grayscale' : ''}`}>
-                                <div className={`p-2 rounded-full ${theme.bg} ${theme.accentText}`}><Icon name={badge.iconName} size={16} /></div>
-                                <div><h4 className={`font-bold text-sm ${theme.textMain}`}>{badge.name}</h4><p className="text-[10px] text-gray-500 leading-tight mt-1">{badge.desc}</p></div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                <div className={`${theme.cardBg} rounded-xl p-4 shadow-sm border ${theme.id === 'dark' ? 'border-zinc-700' : 'border-gray-100'}`}>
-                    <h3 className={`font-bold text-md ${theme.textMain} mb-4 flex items-center gap-2`}><Settings size={18} /> Aparência</h3>
-                    <div className="space-y-3">
-                        <button onClick={() => setTheme(THEMES.classic)} className={`w-full flex items-center justify-between p-3 rounded-lg border-2 ${theme.id === 'classic' ? 'border-red-600 bg-red-50' : 'border-gray-100'}`}><div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-red-600"></div><span className="text-sm font-bold text-zinc-800">Moka Classic</span></div>{theme.id === 'classic' && <Star size={14} className="text-red-600 fill-current" />}</button>
-                        <button onClick={() => setTheme(THEMES.dark)} className={`w-full flex items-center justify-between p-3 rounded-lg border-2 ${theme.id === 'dark' ? 'border-yellow-500 bg-zinc-800' : 'border-gray-100'}`}><div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-zinc-900 border border-gray-600"></div><span className={`text-sm font-bold ${theme.id === 'dark' ? 'text-white' : 'text-zinc-600'}`}>Midnight Roast</span></div>{theme.id === 'dark' && <Star size={14} className="text-yellow-500 fill-current" />}</button>
-                        <button onClick={() => setTheme(THEMES.nature)} className={`w-full flex items-center justify-between p-3 rounded-lg border-2 ${theme.id === 'nature' ? 'border-green-700 bg-stone-100' : 'border-gray-100'}`}><div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-stone-200 border border-green-700"></div><span className={`text-sm font-bold text-stone-600`}>Fazenda (Nature)</span></div>{theme.id === 'nature' && <Star size={14} className="text-green-700 fill-current" />}</button>
-                    </div>
-                </div>
-            </div>
-        );
-
-        const SensoryView = ({ theme }) => (
-            <div className="p-4 pb-24">
-                <h2 className={`text-xl font-bold mb-2 ${theme.textMain}`}>Avaliação Sensorial</h2>
-                <p className={`text-sm ${theme.textSec} mb-6`}>Registre suas percepções do Café Piatã.</p>
-                <SensoryWheel theme={theme} />
-                <div className={`${theme.cardBg} p-4 rounded-xl shadow-sm mb-4`}>
-                    <h3 className={`font-bold mb-2 ${theme.textMain}`}>Notas de Prova</h3>
-                    <textarea className={`w-full p-3 rounded-lg bg-transparent border ${theme.id === 'dark' ? 'border-zinc-700 text-white' : 'border-gray-200 text-zinc-800'} text-sm focus:outline-none focus:ring-1 focus:ring-red-500`} rows="3" placeholder="Descreva o que sentiu (ex: acidez de maracujá, finalização doce...)"></textarea>
-                </div>
-            </div>
-        );
-
         const App = () => {
             const [activeTab, setActiveTab] = useState('home');
             const [currentTheme, setCurrentTheme] = useState(THEMES.classic);
-            // Receitas agora começam vazias e são carregadas
             const [recipes, setRecipes] = useState([]);
             const [baristaMode, setBaristaMode] = useState(false);
             const [viewMode, setViewMode] = useState('normal');
-            const [isLoading, setIsLoading] = useState(false);
-            const [isSaving, setIsSaving] = useState(false);
+            const [selectedRecipe, setSelectedRecipe] = useState(null);
 
-            // Hook para carregar ícones
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
-            });
+            }); 
 
-            // Hook para ler do Firebase em tempo real
             useEffect(() => {
-                setIsLoading(true);
-                // "escuta" a coleção 'recipes'
-                const unsubscribe = db.collection('recipes')
-                    .orderBy('createdAt', 'desc')
-                    .onSnapshot((snapshot) => {
-                        const loaded = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        setRecipes(loaded);
-                        setIsLoading(false);
-                    }, (error) => {
-                        console.error("Erro ao ler Firebase:", error);
-                        // Se der erro (provavelmente falta de indice ou permissao), apenas para o loading
-                        setIsLoading(false);
-                    });
-                
-                return () => unsubscribe();
+                const unsub = db.collection('recipes').orderBy('createdAt', 'desc').onSnapshot(snap => setRecipes(snap.docs.map(d => ({id:d.id, ...d.data()}))), e => console.log(e));
+                return () => unsub();
             }, []);
 
-            const goToRecipe = () => setActiveTab('sensory');
-
-            const handleSaveRecipe = async (newRecipe) => {
-                setIsSaving(true);
-                try {
-                    // Salvar no Firestore
-                    await db.collection('recipes').add({
-                        ...newRecipe,
-                        createdAt: new Date(), // Adiciona timestamp
-                        author: 'Moka Clube' 
-                    });
-                    setViewMode('normal');
-                    setActiveTab('home');
-                } catch (error) {
-                    alert("Erro ao salvar: " + error.message);
-                } finally {
-                    setIsSaving(false);
-                }
-            };
-
             const renderContent = () => {
-                if (viewMode === 'admin') return <AdminRecipeForm theme={currentTheme} onSave={handleSaveRecipe} onCancel={() => setViewMode('normal')} isSaving={isSaving} />;
+                if (viewMode === 'admin') return <AdminRecipeForm theme={currentTheme} onSave={async (r) => { try { await db.collection('recipes').add({...r, createdAt: new Date(), author: 'Moka Clube'}); setViewMode('normal'); setActiveTab('home'); } catch(e){ alert(e.message); } }} onCancel={() => setViewMode('normal')} />;
                 switch (activeTab) {
-                    case 'home': return <FeedView theme={currentTheme} goToRecipe={goToRecipe} recipes={recipes} baristaMode={baristaMode} setView={setViewMode} isLoading={isLoading} />;
                     case 'timer': return <TimerView theme={currentTheme} />;
-                    case 'community': return <CommunityView theme={currentTheme} />;
-                    case 'sensory': return <SensoryView theme={currentTheme} />;
-                    case 'profile': return <ProfileView theme={currentTheme} setTheme={setCurrentTheme} baristaMode={baristaMode} setBaristaMode={setBaristaMode} />;
-                    default: return <FeedView theme={currentTheme} recipes={recipes} />;
+                    case 'sensory': return <SensoryWheel theme={currentTheme} />;
+                    case 'community': return (
+                        <div className="p-4 pb-24">
+                            <div className={`flex items-center gap-2 mb-6 ${currentTheme.cardBg} border ${currentTheme.id === 'dark' ? 'border-zinc-700' : 'border-gray-200'} p-2 rounded-lg`}>
+                                <Icon name="search" size={20} className="text-gray-400 ml-2" />
+                                <input type="text" placeholder="Buscar receitas..." className={`bg-transparent w-full p-1 outline-none ${currentTheme.textMain} text-sm`} />
+                            </div>
+                            <div className="flex justify-between items-end mb-4">
+                                <div><h3 className={`font-bold text-xl ${currentTheme.textMain}`}>Comunidade Moka</h3><p className={`text-xs ${currentTheme.textSec}`}>O que os membros estão bebendo</p></div>
+                                <button className={`${currentTheme.headerBg} ${currentTheme.headerText} p-2 rounded-full shadow-lg`}><Icon name="plus-circle" size={24} /></button>
+                            </div>
+                            {COMMUNITY_RECIPES.map(recipe => (
+                                <RecipeCard key={recipe.id} recipe={recipe} isOfficial={false} theme={currentTheme} onViewDetail={setSelectedRecipe} />
+                            ))}
+                        </div>
+                    );
+                    case 'profile': return (
+                        <div className="p-4 pb-24">
+                            <div className={`${currentTheme.cardBg} rounded-xl p-6 shadow-sm border ${currentTheme.id === 'dark' ? 'border-zinc-700' : 'border-gray-100'} mb-6 text-center`}>
+                                <div className="w-20 h-20 bg-gray-300 rounded-full mx-auto mb-3 flex items-center justify-center text-4xl">☕</div>
+                                <h2 className={`font-bold text-xl ${currentTheme.textMain}`}>Sócio Fundador</h2>
+                                <div className={`mb-6 mt-4 p-4 rounded-xl border-2 border-dashed ${baristaMode ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200'}`}><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${baristaMode ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-400'}`}><Icon name="shield" size={20} /></div><div><h4 className={`font-bold text-sm ${baristaMode ? 'text-zinc-900' : currentTheme.textMain}`}>Modo Barista</h4></div></div><button onClick={() => setBaristaMode(!baristaMode)} className={`px-3 py-1 rounded-full text-xs font-bold ${baristaMode ? 'bg-zinc-900 text-white' : 'bg-gray-200 text-gray-500'}`}>{baristaMode ? 'ATIVO' : 'OFF'}</button></div></div>
+                                <h3 className={`font-bold text-md ${currentTheme.textMain} mb-4 text-left flex items-center gap-2`}><Icon name="settings" size={18} /> Aparência</h3>
+                                <div className="space-y-3">
+                                    <button onClick={() => setCurrentTheme(THEMES.classic)} className={`w-full flex items-center justify-between p-3 rounded-lg border-2 ${currentTheme.id === 'classic' ? 'border-red-600 bg-red-50' : 'border-gray-100'}`}><div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-red-600"></div><span className="text-sm font-bold text-zinc-800">Moka Classic</span></div>{currentTheme.id === 'classic' && <Icon name="star" size={14} className="text-red-600 fill-current" />}</button>
+                                    <button onClick={() => setCurrentTheme(THEMES.dark)} className={`w-full flex items-center justify-between p-3 rounded-lg border-2 ${currentTheme.id === 'dark' ? 'border-yellow-500 bg-zinc-800' : 'border-gray-100'}`}><div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-zinc-900 border border-gray-600"></div><span className={`text-sm font-bold ${currentTheme.id === 'dark' ? 'text-white' : 'text-zinc-600'}`}>Midnight Roast</span></div>{currentTheme.id === 'dark' && <Icon name="star" size={14} className="text-yellow-500 fill-current" />}</button>
+                                    <button onClick={() => setCurrentTheme(THEMES.nature)} className={`w-full flex items-center justify-between p-3 rounded-lg border-2 ${currentTheme.id === 'nature' ? 'border-green-700 bg-stone-100' : 'border-gray-100'}`}><div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-stone-200 border border-green-700"></div><span className={`text-sm font-bold text-stone-600`}>Fazenda (Nature)</span></div>{currentTheme.id === 'nature' && <Icon name="star" size={14} className="text-green-700 fill-current" />}</button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                    default: return (
+                        <div className="p-4 pb-24">
+                            <div className={`${currentTheme.headerBg} rounded-2xl p-5 mb-6 text-white relative overflow-hidden shadow-lg border border-zinc-800`}>
+                                <div className={`absolute top-0 right-0 w-32 h-32 ${currentTheme.accent} rounded-full blur-3xl opacity-30 translate-x-10 -translate-y-10`}></div>
+                                <span className={`${currentTheme.accent} text-[10px] font-bold px-2 py-1 rounded mb-2 inline-block text-white`}>CLUBE DE ASSINATURA</span>
+                                <h2 className="relative z-10 text-xl font-bold mb-1">Café do Mês: Piatã</h2>
+                                <button onClick={() => setActiveTab('sensory')} className={`relative z-10 ${currentTheme.cardBg} ${currentTheme.textMain} px-4 py-2 rounded-lg text-sm font-bold mt-2`}>Avaliar este Café</button>
+                            </div>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className={`font-bold text-lg ${currentTheme.textMain}`}>Receitas Oficiais</h3>
+                                {baristaMode && <button onClick={() => setViewMode('admin')} className={`flex items-center gap-1 ${currentTheme.accentText} text-xs font-bold border border-current px-2 py-1 rounded-full animate-pulse`}><Icon name="plus-circle" size={14} /> NOVA</button>}
+                            </div>
+                            {[...recipes, ...INITIAL_OFFICIAL_RECIPES].filter((v,i,a)=>a.findIndex(v2=>(v2.id===v.id))===i).map(recipe => <RecipeCard key={recipe.id} recipe={recipe} isOfficial={true} theme={currentTheme} onViewDetail={setSelectedRecipe} />)}
+                        </div>
+                    );
                 }
             };
 
@@ -570,21 +424,21 @@
                 <div className={`${currentTheme.bg} min-h-screen font-sans transition-colors duration-300 max-w-md mx-auto shadow-2xl overflow-hidden relative border-x ${currentTheme.id === 'dark' ? 'border-zinc-800' : 'border-gray-200'}`}>
                     <Header theme={currentTheme} baristaMode={baristaMode} />
                     <main className="min-h-[calc(100vh-140px)]">{renderContent()}</main>
+                    {selectedRecipe && <RecipeDetailModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} theme={currentTheme} />}
                     {viewMode !== 'admin' && (
                         <nav className={`fixed bottom-0 w-full max-w-md ${currentTheme.navBg} border-t ${currentTheme.id === 'dark' ? 'border-zinc-800' : 'border-gray-200'} flex justify-around py-3 pb-5 px-2 z-50 transition-colors duration-300`}>
-                            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'home' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><Coffee size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} /><span className="text-[10px] font-medium">Início</span></button>
-                            <button onClick={() => setActiveTab('timer')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'timer' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><Timer size={24} strokeWidth={activeTab === 'timer' ? 2.5 : 2} /><span className="text-[10px] font-medium">Timer</span></button>
-                            <button onClick={() => setActiveTab('sensory')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'sensory' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><BarChart2 size={24} strokeWidth={activeTab === 'sensory' ? 2.5 : 2} /><span className="text-[10px] font-medium">Avaliar</span></button>
-                            <button onClick={() => setActiveTab('community')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'community' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><Users size={24} strokeWidth={activeTab === 'community' ? 2.5 : 2} /><span className="text-[10px] font-medium">Tribo</span></button>
-                            <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'profile' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><div className={`w-6 h-6 rounded-full overflow-hidden border ${activeTab === 'profile' ? currentTheme.accent : 'border-gray-300 bg-gray-200'} relative`}><div className={`w-full h-full flex items-center justify-center text-[8px] font-bold ${activeTab === 'profile' ? 'bg-transparent text-white' : 'bg-gray-200 text-gray-500'}`}>{baristaMode ? <Shield size={10} className="text-black" /> : 'EU'}</div></div><span className="text-[10px] font-medium">Perfil</span></button>
+                            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'home' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><Icon name="coffee" size={24} strokeWidth={activeTab === 'home' ? 2.5 : 2} /><span className="text-[10px] font-medium">Início</span></button>
+                            <button onClick={() => setActiveTab('timer')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'timer' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><Icon name="timer" size={24} strokeWidth={activeTab === 'timer' ? 2.5 : 2} /><span className="text-[10px] font-medium">Timer</span></button>
+                            <button onClick={() => setActiveTab('sensory')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'sensory' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><Icon name="bar-chart-2" size={24} strokeWidth={activeTab === 'sensory' ? 2.5 : 2} /><span className="text-[10px] font-medium">Avaliar</span></button>
+                            <button onClick={() => setActiveTab('community')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'community' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><Icon name="users" size={24} strokeWidth={activeTab === 'community' ? 2.5 : 2} /><span className="text-[10px] font-medium">Tribo</span></button>
+                            <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center gap-1 w-16 ${activeTab === 'profile' ? currentTheme.accentText : 'text-gray-400 hover:text-gray-500'}`}><div className={`w-6 h-6 rounded-full overflow-hidden border ${activeTab === 'profile' ? currentTheme.accent : 'border-gray-300 bg-gray-200'} relative flex items-center justify-center`}><span className="text-[8px] font-bold text-gray-500">EU</span></div><span className="text-[10px] font-medium">Perfil</span></button>
                         </nav>
                     )}
                 </div>
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
