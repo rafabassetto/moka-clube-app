@@ -1,3 +1,10 @@
+<!-- 
+GITHUB_AI_SUMMARY:
+- REFACTOR: Reescrita completa da lógica de Auth para garantir transição de estado imediata (Login Force Update).
+- FIX: Ícones convertidos para SVG inline para eliminar dependências de scripts externos e erros de CORS.
+- FEAT: Modo Demo/Convidado aprimorado para testes rápidos sem backend.
+- UI: Tema Dark Mode consolidado como padrão.
+-->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -21,7 +28,8 @@
                 'text-white', 'text-zinc-400', 'text-zinc-500', 'text-zinc-300',
                 'bg-yellow-500', 'text-yellow-500', 'border-yellow-500', 'bg-yellow-400', 'text-yellow-400',
                 'border-zinc-700', 'border-zinc-800',
-                'fill-current', 'animate-pulse', 'border-current'
+                'fill-current', 'animate-pulse', 'border-current',
+                'bg-red-600', 'text-red-600'
             ],
             theme: {
                 extend: {
@@ -35,6 +43,7 @@
 
     <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <style>
@@ -50,10 +59,10 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
         const { useState, useEffect, useRef } = React;
 
-        // --- FIREBASE ---
+        // --- FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyDnElIN9JV7OtApqh4orYVXjdpr41jtyHc",
             authDomain: "moka-clube-app.firebaseapp.com",
@@ -63,77 +72,72 @@
             appId: "1:921502412834:web:f72730a5f7444cb440da7b"
         };
 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        let db = null;
+        let auth = null;
 
-        // --- TEMA ÚNICO ---
+        try {
+            if (typeof firebase !== 'undefined') {
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                auth = firebase.auth();
+                console.log("Firebase ligado.");
+            }
+        } catch (error) {
+            console.error("Erro Firebase:", error);
+        }
+
+        // --- TEMA ---
         const THEME = {
-            id: 'dark', 
-            bg: 'bg-zinc-900', 
-            cardBg: 'bg-zinc-800',
-            textMain: 'text-white', 
-            textSec: 'text-zinc-400',
-            accent: 'bg-yellow-500', 
-            accentText: 'text-yellow-500',
-            navBg: 'bg-zinc-900', 
-            headerBg: 'bg-black', 
-            headerText: 'text-white',
-            border: 'border-zinc-700'
+            id: 'dark', bg: 'bg-zinc-900', cardBg: 'bg-zinc-800', textMain: 'text-white', textSec: 'text-zinc-400',
+            accent: 'bg-yellow-500', accentText: 'text-yellow-500', navBg: 'bg-zinc-900', headerBg: 'bg-black', headerText: 'text-white', border: 'border-zinc-700'
         };
 
-        // --- ÍCONES INTERNOS ---
+        // --- ÍCONES SVG ---
         const ICON_PATHS = {
             'coffee': <path d="M17 8h1a4 4 0 1 1 0 8h-1 M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z M6 1v3 M10 1v3 M14 1v3" />,
             'timer': <path d="M10 2h4 M12 14v-4 M4 13a8 8 0 0 1 8-7 8 8 0 1 1-8 7 M22 13a18.3 18.3 0 0 1-4 6" />, 
             'users': <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" />,
-            'plus-circle': <><circle cx="12" cy="12" r="10" /><path d="M8 12h8 M12 8v8" /></>,
+            'plus-circle': <g><circle cx="12" cy="12" r="10" /><path d="M8 12h8 M12 8v8" /></g>,
             'heart': <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
             'droplet': <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.74l-4-3.26-4 3.26c-2 1.84-3 3.74-3 5.74a7 7 0 0 0 7 7Z" />,
             'thermometer': <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z" />,
             'chevron-right': <path d="m9 18 6-6-6-6" />,
             'play': <polygon points="5 3 19 12 5 21 5 3" />,
-            'play-circle': <><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></>,
-            'pause': <><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>,
-            'rotate-ccw': <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></>,
-            'search': <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>,
-            'award': <><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></>,
-            'settings': <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></>,
+            'play-circle': <g><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></g>,
+            'pause': <g><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></g>,
+            'rotate-ccw': <g><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></g>,
+            'search': <g><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></g>,
+            'award': <g><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></g>,
+            'settings': <g><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></g>,
             'star': <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />,
             'zap': <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />,
-            'map-pin': <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>,
-            'bar-chart-2': <><line x1="18" x2="18" y1="20" y2="10" /><line x1="12" x2="12" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="14" /></>,
-            'youtube': <><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17" /><path d="m10 15 5-3-5-3z" /></>,
-            'save': <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>,
+            'map-pin': <g><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></g>,
+            'bar-chart-2': <g><line x1="18" x2="18" y1="20" y2="10" /><line x1="12" x2="12" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="14" /></g>,
+            'youtube': <g><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17" /><path d="m10 15 5-3-5-3z" /></g>,
+            'save': <g><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></g>,
             'shield': <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />,
-            'x': <><path d="M18 6 6 18" /><path d="m6 6 12 12" /></>,
-            'chef-hat': <><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 9.08 0A5.11 5.11 0 0 1 18.59 6 4 4 0 0 1 18 13.87V21H6Z" /><line x1="6" x2="18" y1="17" y2="17" /></>,
-            'container': <><path d="M20.9 19.8A2 2 0 0 1 19 21H5a2 2 0 0 1-1.9-1.2l-2.4-7.2A2 2 0 0 1 2.6 10H21.4a2 2 0 0 1 1.9 2.6Z" /><path d="M10 21V10" /><path d="M14 21V10" /></>,
-            'arrow-down-circle': <><circle cx="12" cy="12" r="10" /><polyline points="8 12 12 16 16 12" /><line x1="12" x2="12" y1="8" y2="16" /></>,
-            'flask-conical': <><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" /><line x1="8.5" x2="15.5" y1="2" y2="2" /><path d="M8.5 2h7" /></>,
+            'x': <g><path d="M18 6 6 18" /><path d="m6 6 12 12" /></g>,
+            'chef-hat': <g><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 9.08 0A5.11 5.11 0 0 1 18.59 6 4 4 0 0 1 18 13.87V21H6Z" /><line x1="6" x2="18" y1="17" y2="17" /></g>,
+            'container': <g><path d="M20.9 19.8A2 2 0 0 1 19 21H5a2 2 0 0 1-1.9-1.2l-2.4-7.2A2 2 0 0 1 2.6 10H21.4a2 2 0 0 1 1.9 2.6Z" /><path d="M10 21V10" /><path d="M14 21V10" /></g>,
+            'arrow-down-circle': <g><circle cx="12" cy="12" r="10" /><polyline points="8 12 12 16 16 12" /><line x1="12" x2="12" y1="8" y2="16" /></g>,
+            'flask-conical': <g><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" /><line x1="8.5" x2="15.5" y1="2" y2="2" /><path d="M8.5 2h7" /></g>,
             'triangle': <path d="M13.73 21a2 2 0 0 1-3.46 0l-8-14A2 2 0 0 1 4 4h16a2 2 0 0 1 1.73 3l-8 14z" />,
-            'trash': <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>,
+            'trash': <g><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></g>,
             'edit': <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />,
-            'send': <><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></>
+            'send': <g><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></g>,
+            'log-out': <g><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></g>,
+            'mail': <g><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></g>,
+            'lock': <g><rect width="18" height="11" x="3" y="11" rx="2" y="11" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
+            'user': <g><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></g>,
+            'calendar': <g><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></g>,
+            'phone': <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
         };
 
         const Icon = ({ name, size = 24, className, fill = "none", ...props }) => {
             const content = ICON_PATHS[name];
             if (!content) return null;
-            
             return (
-                <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width={size} 
-                    height={size} 
-                    viewBox="0 0 24 24" 
-                    fill={fill} 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    className={className} 
-                    {...props}
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
                     {content}
                 </svg>
             );
@@ -146,9 +150,7 @@
                 this.state = { hasError: false, error: null };
             }
 
-            static getDerivedStateFromError(error) {
-                return { hasError: true, error };
-            }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
 
             render() {
                 if (this.state.hasError) {
@@ -164,7 +166,67 @@
             }
         }
 
-        // --- DADOS E MÉTODOS ---
+        // --- AUTH VIEW ---
+        const AuthView = ({ onLoginSuccess }) => {
+            const [isRegistering, setIsRegistering] = useState(false);
+            const [isLoading, setIsLoading] = useState(false);
+            const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', birthdate: '' });
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                try {
+                    if (!auth) throw new Error("Sistema de login indisponível.");
+                    
+                    if (isRegistering) {
+                        const cred = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
+                        if (db) {
+                            await db.collection('users').doc(cred.user.uid).set({
+                                name: formData.name, email: formData.email, phone: formData.phone, 
+                                birthdate: formData.birthdate, createdAt: new Date()
+                            });
+                        }
+                        await cred.user.updateProfile({ displayName: formData.name });
+                        onLoginSuccess(cred.user);
+                    } else {
+                        const cred = await auth.signInWithEmailAndPassword(formData.email, formData.password);
+                        onLoginSuccess(cred.user);
+                    }
+                } catch (error) {
+                    alert("Erro: " + error.message);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const handleDemo = () => {
+                onLoginSuccess({ displayName: "Visitante Demo", email: "demo@moka.com.br", uid: "demo-123" });
+            };
+
+            return (
+                <div className="min-h-screen bg-zinc-900 flex flex-col items-center justify-center p-6 text-white">
+                    <div className="w-full max-w-sm text-center mb-8">
+                        <div className="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-yellow-500">
+                            <Icon name="coffee" size={40} className="text-white" />
+                        </div>
+                        <h1 className="text-2xl font-bold tracking-wider">MOKA CLUBE</h1>
+                        <p className="text-zinc-500 text-sm">Entre para a comunidade do café.</p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
+                        {isRegistering && <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3"><Icon name="user" className="text-zinc-500" /><input type="text" placeholder="Nome Completo" className="bg-transparent w-full outline-none text-sm" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required /></div>}
+                        <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3"><Icon name="mail" className="text-zinc-500" /><input type="email" placeholder="E-mail" className="bg-transparent w-full outline-none text-sm" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required /></div>
+                        <div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3"><Icon name="lock" className="text-zinc-500" /><input type="password" placeholder="Senha" className="bg-transparent w-full outline-none text-sm" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required /></div>
+                        {isRegistering && <><div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3"><Icon name="phone" className="text-zinc-500" /><input type="tel" placeholder="Celular" className="bg-transparent w-full outline-none text-sm" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} required /></div><div className="bg-zinc-800 p-3 rounded-lg border border-zinc-700 flex items-center gap-3"><Icon name="calendar" className="text-zinc-500" /><input type="date" className="bg-transparent w-full outline-none text-sm text-zinc-400" value={formData.birthdate} onChange={e => setFormData({...formData, birthdate: e.target.value})} required /></div></>}
+                        <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center">{isLoading ? "Carregando..." : (isRegistering ? "Criar Conta" : "Entrar")}</button>
+                    </form>
+                    <button onClick={handleDemo} className="mt-4 text-xs text-zinc-500 underline">Entrar como Convidado</button>
+                    <div className="mt-6 text-center text-sm"><button onClick={() => setIsRegistering(!isRegistering)} className="text-zinc-400 hover:text-white underline">{isRegistering ? "Já tem conta? Faça Login" : "Não tem conta? Cadastre-se"}</button></div>
+                </div>
+            );
+        };
+
+        // --- DADOS ---
         const BREW_METHODS = [
             { name: "Hario V60", icon: "coffee", defaultTime: 180 },
             { name: "Prensa Francesa", icon: "container", defaultTime: 240 },
@@ -240,29 +302,34 @@
             );
         };
 
-        const ReviewSection = ({ recipeId }) => {
+        const ReviewSection = ({ recipeId, user }) => {
             const [reviews, setReviews] = useState([]);
             const [newRating, setNewRating] = useState(0);
             const [newComment, setNewComment] = useState("");
             const [isSubmitting, setIsSubmitting] = useState(false);
 
             useEffect(() => {
-                if (!recipeId || recipeId.startsWith('static')) return;
+                if (!recipeId || recipeId.startsWith('static') || !db) return;
                 const unsubscribe = db.collection('recipes').doc(recipeId).collection('reviews')
                     .orderBy('createdAt', 'desc')
                     .onSnapshot(snapshot => {
                         setReviews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                    }, err => console.log("Erro ao carregar reviews:", err));
+                    }, err => console.log("Erro reviews:", err));
                 return () => unsubscribe();
             }, [recipeId]);
 
             const handleSubmit = async () => {
                 if (newRating === 0) return alert("Por favor, selecione uma nota.");
                 if (!recipeId || recipeId.startsWith('static')) return alert("Receitas de exemplo não aceitam comentários reais.");
+                if (!db) return alert("Modo offline: não é possível salvar.");
                 setIsSubmitting(true);
                 try {
                     await db.collection('recipes').doc(recipeId).collection('reviews').add({
-                        author: "Você", rating: newRating, comment: newComment, createdAt: new Date()
+                        author: user.displayName || "Usuário", 
+                        rating: newRating, 
+                        comment: newComment, 
+                        createdAt: new Date(),
+                        userId: user.uid
                     });
                     setNewComment(""); setNewRating(0);
                 } catch (error) { console.error(error); alert("Erro ao enviar review."); } finally { setIsSubmitting(false); }
@@ -295,7 +362,7 @@
             );
         };
 
-        const RecipeDetailModal = ({ recipe, onClose }) => {
+        const RecipeDetailModal = ({ recipe, onClose, user }) => {
             if (!recipe) return null;
             return (
                 <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
@@ -305,10 +372,7 @@
                             <button onClick={onClose} className={`p-2 rounded-full hover:bg-white/10 ${THEME.textMain}`}><Icon name="x" size={20} /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                            
-                            {/* Vídeo / Thumbnail */}
                             <YouTubePlayer videoId={recipe.videoId} />
-
                             <div className="grid grid-cols-3 gap-2">
                                 <div className={`p-3 rounded-lg text-center border ${THEME.border}`}><div className={`mx-auto mb-1 ${THEME.accentText} flex justify-center`}><Icon name="droplet" size={16} /></div><span className={`block text-xs font-bold ${THEME.textMain}`}>{recipe.ratio || '1:16'}</span><span className="text-[10px] text-gray-400">Ratio</span></div>
                                 <div className={`p-3 rounded-lg text-center border ${THEME.border}`}><div className={`mx-auto mb-1 ${THEME.accentText} flex justify-center`}><Icon name="thermometer" size={16} /></div><span className={`block text-xs font-bold ${THEME.textMain}`}>{recipe.temp || '93°C'}</span><span className="text-[10px] text-gray-400">Temp</span></div>
@@ -330,7 +394,7 @@
                                     )) : <p className={`text-sm ${THEME.textSec}`}>Siga o método padrão {recipe.method}.</p>}
                                 </div>
                             </div>
-                            <ReviewSection recipeId={recipe.id} />
+                            <ReviewSection recipeId={recipe.id} user={user} />
                         </div>
                     </div>
                 </div>
@@ -347,19 +411,12 @@
                             <button onClick={onClose} className={`p-2 rounded-full hover:bg-white/10 ${THEME.textMain}`}><Icon name="x" size={20} /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {recipes.length === 0 ? (
-                                <p className="text-center text-zinc-500 py-8">Nenhuma receita encontrada para este café.</p>
-                            ) : (
-                                recipes.map(recipe => (
-                                    <div key={recipe.id} onClick={() => { onClose(); onViewDetail(recipe); }} className="bg-zinc-900 p-3 rounded-lg border border-zinc-700 cursor-pointer hover:bg-zinc-800">
-                                        <div className="flex justify-between">
-                                            <span className="font-bold text-sm text-white">{recipe.title}</span>
-                                            <span className="text-xs text-yellow-500 font-bold">{recipe.method}</span>
-                                        </div>
-                                        <p className="text-xs text-zinc-400 mt-1">por {recipe.author}</p>
-                                    </div>
-                                ))
-                            )}
+                            {recipes.length === 0 ? <p className="text-center text-zinc-500 py-8">Nenhuma receita encontrada para este café.</p> : recipes.map(recipe => (
+                                <div key={recipe.id} onClick={() => { onClose(); onViewDetail(recipe); }} className="bg-zinc-900 p-3 rounded-lg border border-zinc-700 cursor-pointer hover:bg-zinc-800">
+                                    <div className="flex justify-between"><span className="font-bold text-sm text-white">{recipe.title}</span><span className="text-xs text-yellow-500 font-bold">{recipe.method}</span></div>
+                                    <p className="text-xs text-zinc-400 mt-1">por {recipe.author}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -397,7 +454,7 @@
             );
         };
 
-        const SensoryEvaluation = ({ onFindRecipes }) => {
+        const SensoryEvaluation = ({ onFindRecipes, user }) => {
             const [view, setView] = useState('list'); // 'list' | 'form'
             const [evaluations, setEvaluations] = useState([]);
             const [formData, setFormData] = useState({ 
@@ -406,11 +463,16 @@
             });
 
             useEffect(() => {
-                const unsub = db.collection('evaluations').orderBy('createdAt', 'desc').onSnapshot(snap => {
-                    setEvaluations(snap.docs.map(d => ({id: d.id, ...d.data()})));
-                }, err => console.log(err));
+                if (!user || !db) return;
+                const unsub = db.collection('evaluations')
+                    .where('userId', '==', user.uid)
+                    .onSnapshot(snap => {
+                        const data = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                        data.sort((a, b) => b.createdAt - a.createdAt);
+                        setEvaluations(data);
+                    }, err => console.log("Erro ao carregar avaliações:", err));
                 return () => unsub();
-            }, []);
+            }, [user]);
 
             const handleEdit = (ev) => {
                 setFormData(ev);
@@ -419,20 +481,17 @@
 
             const handleSave = async () => {
                 if (!formData.coffeeName) return alert("Digite o nome do café");
+                if (!db) return alert("Modo offline.");
                 try {
                     if (formData.id) {
-                        // Update existing
                         await db.collection('evaluations').doc(formData.id).update({
-                            coffeeName: formData.coffeeName,
-                            rating: formData.rating,
-                            notes: formData.notes,
-                            attributes: formData.attributes
+                            coffeeName: formData.coffeeName, rating: formData.rating, notes: formData.notes, attributes: formData.attributes
                         });
                     } else {
-                        // Create new
-                        await db.collection('evaluations').add({ ...formData, createdAt: new Date() });
+                        await db.collection('evaluations').add({ 
+                            ...formData, userId: user.uid, createdAt: new Date() 
+                        });
                     }
-                    
                     setView('list');
                     setFormData({ coffeeName: '', rating: 0, notes: '', attributes: { acidez: 3, docura: 4, corpo: 2, amargor: 1, finalizacao: 3 } });
                 } catch(e) { alert("Erro ao salvar: " + e.message); }
@@ -459,150 +518,35 @@
                             <h2 className={`text-xl font-bold ${THEME.textMain}`}>Meus Cafés</h2>
                             <button onClick={() => { setFormData({ coffeeName: '', rating: 0, notes: '', attributes: { acidez: 3, docura: 4, corpo: 2, amargor: 1, finalizacao: 3 } }); setView('form'); }} className={`${THEME.headerBg} ${THEME.headerText} px-4 py-2 rounded-full shadow-lg text-xs font-bold flex items-center gap-2 border border-zinc-700`}><Icon name="plus-circle" size={16} /> NOVO</button>
                         </div>
-                        {evaluations.length === 0 ? (
-                            <div className="text-center py-10 text-zinc-500">
-                                <Icon name="coffee" size={48} className="mx-auto mb-2 opacity-20" />
-                                <p>Nenhuma avaliação ainda.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {evaluations.map(ev => (
-                                    <div key={ev.id} onClick={() => handleEdit(ev)} className={`${THEME.cardBg} p-4 rounded-xl border ${THEME.border} shadow-sm cursor-pointer hover:bg-zinc-700/50 transition-colors relative group`}>
-                                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900 p-1.5 rounded-full shadow-md border border-zinc-700">
-                                            <Icon name="edit" size={12} className="text-zinc-400" />
-                                        </div>
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h3 className="font-bold text-white text-lg">{ev.coffeeName}</h3>
-                                            <div className="flex text-yellow-500">
-                                                {[...Array(Number(ev.rating)||0)].map((_, i) => <Icon key={i} name="star" size={14} className="fill-current" />)}
-                                            </div>
-                                        </div>
-                                        <p className="text-xs text-zinc-400 mb-3 line-clamp-2">{ev.notes}</p>
-                                        <div className="flex gap-3 mt-3 items-center">
-                                            {/* Mini Radar Chart Visualization - Aumentei um pouco para 50x50 para dar destaque */}
-                                            <div className="flex-shrink-0">
-                                                <svg width="50" height="50" viewBox="0 0 200 200" className="opacity-60">
-                                                    {/* Background guide circle */}
-                                                    <circle cx="100" cy="100" r="80" fill="none" stroke="#333" strokeWidth="2" opacity="0.5" />
-                                                    <polygon points={calculatePoints(ev.attributes)} fill="rgba(234, 179, 8, 0.4)" stroke="#EAB308" strokeWidth="4" />
-                                                </svg>
-                                            </div>
-                                            
-                                            {/* Grid layout para atributos */}
-                                            <div className="flex-1 grid grid-cols-3 gap-x-2 gap-y-1 text-[10px] text-zinc-400">
-                                                <div className="flex flex-col">
-                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Acidez</span>
-                                                    <span className="font-bold text-zinc-300">{ev.attributes.acidez}/5</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Doçura</span>
-                                                    <span className="font-bold text-zinc-300">{ev.attributes.docura}/5</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Corpo</span>
-                                                    <span className="font-bold text-zinc-300">{ev.attributes.corpo}/5</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Amargor</span>
-                                                    <span className="font-bold text-zinc-300">{ev.attributes.amargor}/5</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-zinc-600 text-[9px] uppercase tracking-wider">Final</span>
-                                                    <span className="font-bold text-zinc-300">{ev.attributes.finalizacao}/5</span>
-                                                </div>
-                                            </div>
+                        {evaluations.length === 0 ? <div className="text-center py-10 text-zinc-500"><Icon name="coffee" size={48} className="mx-auto mb-2 opacity-20" /><p>Nenhuma avaliação ainda.</p></div> : 
+                            <div className="space-y-4">{evaluations.map(ev => (
+                                <div key={ev.id} onClick={() => handleEdit(ev)} className={`${THEME.cardBg} p-4 rounded-xl border ${THEME.border} shadow-sm cursor-pointer hover:bg-zinc-700/50 transition-colors relative group`}>
+                                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900 p-1.5 rounded-full shadow-md border border-zinc-700"><Icon name="edit" size={12} className="text-zinc-400" /></div>
+                                    <div className="flex justify-between items-start mb-2"><h3 className="font-bold text-white text-lg">{ev.coffeeName}</h3><div className="flex text-yellow-500">{[...Array(Number(ev.rating)||0)].map((_, i) => <Icon key={i} name="star" size={14} className="fill-current" />)}</div></div>
+                                    <p className="text-xs text-zinc-400 mb-3 line-clamp-2">{ev.notes}</p>
+                                    <div className="flex gap-3 mt-3 items-center">
+                                        <div className="flex-shrink-0"><svg width="50" height="50" viewBox="0 0 200 200" className="opacity-60"><circle cx="100" cy="100" r="80" fill="none" stroke="#333" strokeWidth="2" opacity="0.5" /><polygon points={calculatePoints(ev.attributes)} fill="rgba(234, 179, 8, 0.4)" stroke="#EAB308" strokeWidth="4" /></svg></div>
+                                        <div className="flex-1 grid grid-cols-3 gap-x-2 gap-y-1 text-[10px] text-zinc-400">
+                                            <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Acidez</span><span className="font-bold text-zinc-300">{ev.attributes.acidez}/5</span></div>
+                                            <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Doçura</span><span className="font-bold text-zinc-300">{ev.attributes.docura}/5</span></div>
+                                            <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Corpo</span><span className="font-bold text-zinc-300">{ev.attributes.corpo}/5</span></div>
+                                            <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Amargor</span><span className="font-bold text-zinc-300">{ev.attributes.amargor}/5</span></div>
+                                            <div className="flex flex-col"><span className="text-zinc-600 text-[9px] uppercase tracking-wider">Final</span><span className="font-bold text-zinc-300">{ev.attributes.finalizacao}/5</span></div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                </div>
+                            ))}</div>
+                        }
                     </div>
                 );
             }
-
             return (
                 <div className="p-4 pb-24 animate-fade-in">
-                    <div className="flex items-center gap-2 mb-4">
-                        <button onClick={() => { setView('list'); setFormData({ coffeeName: '', rating: 0, notes: '', attributes: { acidez: 3, docura: 4, corpo: 2, amargor: 1, finalizacao: 3 } }); }}><Icon name="chevron-right" size={24} className="rotate-180 text-zinc-400" /></button>
-                        <h2 className={`text-xl font-bold ${THEME.textMain}`}>{formData.id ? 'Editar Avaliação' : 'Avaliar Café'}</h2>
-                    </div>
-
+                    <div className="flex items-center gap-2 mb-4"><button onClick={() => { setView('list'); setFormData({ coffeeName: '', rating: 0, notes: '', attributes: { acidez: 3, docura: 4, corpo: 2, amargor: 1, finalizacao: 3 } }); }}><Icon name="chevron-right" size={24} className="rotate-180 text-zinc-400" /></button><h2 className={`text-xl font-bold ${THEME.textMain}`}>{formData.id ? 'Editar Avaliação' : 'Avaliar Café'}</h2></div>
                     <div className={`${THEME.cardBg} p-4 rounded-xl border ${THEME.border} space-y-6`}>
-                        {/* Nome e Busca */}
-                        <div>
-                            <label className="block text-xs font-bold text-zinc-400 uppercase mb-1">Nome do Café</label>
-                            <div className="flex gap-2">
-                                <input 
-                                    type="text" 
-                                    className="flex-1 p-3 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-sm" 
-                                    placeholder="Ex: Catuaí Amarelo"
-                                    value={formData.coffeeName}
-                                    onChange={e => setFormData({...formData, coffeeName: e.target.value})}
-                                />
-                                {formData.coffeeName && (
-                                    <button 
-                                        onClick={() => onFindRecipes(formData.coffeeName)}
-                                        className="bg-yellow-500 text-black p-3 rounded-lg font-bold"
-                                        title="Procurar receitas"
-                                    >
-                                        <Icon name="search" size={20} />
-                                    </button>
-                                )}
-                            </div>
-                            {formData.coffeeName && <p className="text-[10px] text-zinc-500 mt-1">Clique na lupa para ver receitas deste café.</p>}
-                        </div>
-
-                        {/* Roda Sensorial Interativa */}
-                        <div className="flex flex-col items-center">
-                            <div className="relative w-48 h-48 mb-4">
-                                <svg width="200" height="200" viewBox="0 0 200 200">
-                                    {[1, 2, 3, 4, 5].map(step => <circle key={step} cx="100" cy="100" r={(step/5)*80} fill="none" stroke="#333" strokeWidth="1" />)}
-                                    <polygon points={calculatePoints(formData.attributes)} fill="rgba(234, 179, 8, 0.2)" stroke="#EAB308" strokeWidth="2" />
-                                </svg>
-                                <div className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] font-bold text-zinc-500">ACIDEZ</div>
-                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] font-bold text-zinc-500">CORPO</div>
-                                <div className="absolute right-0 top-1/3 text-[10px] font-bold text-zinc-500">DOÇURA</div>
-                                <div className="absolute left-0 top-1/3 text-[10px] font-bold text-zinc-500">FINAL</div>
-                                <div className="absolute right-2 bottom-1/4 text-[10px] font-bold text-zinc-500">AMARGOR</div>
-                            </div>
-                            <div className="w-full space-y-3">
-                                {Object.entries(formData.attributes).map(([key, val]) => (
-                                    <div key={key} className="flex items-center gap-2 text-xs">
-                                        <span className="w-16 capitalize font-medium text-zinc-400">{key}</span>
-                                        <input 
-                                            type="range" min="1" max="5" step="1" 
-                                            value={val} 
-                                            onChange={(e) => setFormData({
-                                                ...formData, 
-                                                attributes: { ...formData.attributes, [key]: parseInt(e.target.value) }
-                                            })}
-                                            className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-zinc-700 accent-yellow-500"
-                                        />
-                                        <span className="w-4 text-center font-bold text-white">{val}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Avaliação Geral */}
-                        <div className="border-t border-zinc-700 pt-4">
-                            <label className="block text-xs font-bold text-zinc-400 uppercase mb-2">Sua Nota</label>
-                            <div className="flex gap-2 mb-4">
-                                {[1, 2, 3, 4, 5].map(star => (
-                                    <button key={star} onClick={() => setFormData({...formData, rating: star})}>
-                                        <Icon name="star" size={32} className={star <= formData.rating ? "text-yellow-500 fill-current" : "text-zinc-700"} />
-                                    </button>
-                                ))}
-                            </div>
-                            <textarea 
-                                className="w-full p-3 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-sm" 
-                                rows="3" 
-                                placeholder="Notas de prova (ex: frutado, finalização longa...)"
-                                value={formData.notes}
-                                onChange={e => setFormData({...formData, notes: e.target.value})}
-                            ></textarea>
-                        </div>
-
+                        <div><label className="block text-xs font-bold text-zinc-400 uppercase mb-1">Nome do Café</label><div className="flex gap-2"><input type="text" className="flex-1 p-3 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-sm" placeholder="Ex: Catuaí Amarelo" value={formData.coffeeName} onChange={e => setFormData({...formData, coffeeName: e.target.value})} />{formData.coffeeName && <button onClick={() => onFindRecipes(formData.coffeeName)} className="bg-yellow-500 text-black p-3 rounded-lg font-bold" title="Procurar receitas"><Icon name="search" size={20} /></button>}</div></div>
+                        <div className="flex flex-col items-center"><div className="relative w-48 h-48 mb-4"><svg width="200" height="200" viewBox="0 0 200 200">{[1, 2, 3, 4, 5].map(step => <circle key={step} cx="100" cy="100" r={(step/5)*80} fill="none" stroke="#333" strokeWidth="1" />)}<polygon points={calculatePoints(formData.attributes)} fill="rgba(234, 179, 8, 0.2)" stroke="#EAB308" strokeWidth="2" /></svg><div className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] font-bold text-zinc-500">ACIDEZ</div><div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] font-bold text-zinc-500">CORPO</div><div className="absolute right-0 top-1/3 text-[10px] font-bold text-zinc-500">DOÇURA</div><div className="absolute left-0 top-1/3 text-[10px] font-bold text-zinc-500">FINAL</div><div className="absolute right-2 bottom-1/4 text-[10px] font-bold text-zinc-500">AMARGOR</div></div><div className="w-full space-y-3">{Object.entries(formData.attributes).map(([key, val]) => (<div key={key} className="flex items-center gap-2 text-xs"><span className="w-16 capitalize font-medium text-zinc-400">{key}</span><input type="range" min="1" max="5" step="1" value={val} onChange={(e) => setFormData({...formData, attributes: { ...formData.attributes, [key]: parseInt(e.target.value) }})} className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-zinc-700 accent-yellow-500" /><span className="w-4 text-center font-bold text-white">{val}</span></div>))}</div></div>
+                        <div className="border-t border-zinc-700 pt-4"><label className="block text-xs font-bold text-zinc-400 uppercase mb-2">Sua Nota</label><div className="flex gap-2 mb-4">{[1, 2, 3, 4, 5].map(star => (<button key={star} onClick={() => setFormData({...formData, rating: star})}><Icon name="star" size={32} className={star <= formData.rating ? "text-yellow-500 fill-current" : "text-zinc-700"} /></button>))}</div><textarea className="w-full p-3 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-sm" rows="3" placeholder="Notas de prova..." value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})}></textarea></div>
                         <button onClick={handleSave} className={`w-full py-3 rounded-lg font-bold text-black ${THEME.accent} shadow-lg hover:brightness-110`}>Salvar Avaliação</button>
                     </div>
                 </div>
@@ -700,6 +644,8 @@
         };
 
         const App = () => {
+            const [user, setUser] = useState(null);
+            const [isLoadingUser, setIsLoadingUser] = useState(true);
             const [activeTab, setActiveTab] = useState('home');
             const [recipes, setRecipes] = useState([]);
             const [baristaMode, setBaristaMode] = useState(false);
@@ -708,10 +654,30 @@
             const [recipeToEdit, setRecipeToEdit] = useState(null);
             const [searchResults, setSearchResults] = useState(null);
 
+            // Auth Listener
             useEffect(() => {
+                if (!auth) {
+                    setIsLoadingUser(false);
+                    return;
+                }
+                const unsubscribe = auth.onAuthStateChanged(currentUser => {
+                    setUser(currentUser);
+                    setIsLoadingUser(false);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            // Data Listener
+            useEffect(() => {
+                if (!db) return;
                 const unsub = db.collection('recipes').orderBy('createdAt', 'desc').onSnapshot(snap => setRecipes(snap.docs.map(d => ({id:d.id, ...d.data()}))), e => console.log(e));
                 return () => unsub();
             }, []);
+
+            const forceUpdateUser = (userData) => { 
+                setUser(userData); 
+                setIsLoadingUser(false); 
+            };
 
             const handleEditRecipe = (recipe) => {
                 setRecipeToEdit(recipe);
@@ -727,6 +693,14 @@
                 );
                 setSearchResults(results);
             };
+
+            if (isLoadingUser) {
+                return <div className="h-screen bg-zinc-900 flex items-center justify-center text-white"><span className="animate-spin text-3xl">☕</span></div>;
+            }
+
+            if (!user) {
+                return <AuthView onLoginSuccess={forceUpdateUser} />;
+            }
 
             const renderContent = () => {
                 if (viewMode === 'admin') {
@@ -750,7 +724,7 @@
 
                 switch (activeTab) {
                     case 'timer': return <TimerView />;
-                    case 'sensory': return <SensoryEvaluation onFindRecipes={findRecipesForCoffee} />;
+                    case 'sensory': return <SensoryEvaluation onFindRecipes={findRecipesForCoffee} user={user} />;
                     case 'community': return (
                         <div className="p-4 pb-24">
                             <div className={`flex items-center gap-2 mb-6 ${THEME.cardBg} border ${THEME.border} p-2 rounded-lg`}>
@@ -766,27 +740,7 @@
                             ))}
                         </div>
                     );
-                    case 'profile': return (
-                        <div className="p-4 pb-24">
-                            <div className={`${THEME.cardBg} rounded-xl p-6 shadow-sm border ${THEME.border} mb-6 text-center`}>
-                                <div className="w-20 h-20 bg-zinc-700 rounded-full mx-auto mb-3 flex items-center justify-center text-4xl border-2 border-yellow-500">☕</div>
-                                <h2 className={`font-bold text-xl ${THEME.textMain}`}>Sócio Fundador</h2>
-                                <div className={`mb-6 mt-4 p-4 rounded-xl border-2 border-dashed ${baristaMode ? 'border-yellow-400 bg-yellow-500/10' : 'border-zinc-700'}`}><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className={`p-2 rounded-full ${baristaMode ? 'bg-yellow-400 text-black' : 'bg-zinc-700 text-gray-400'}`}><Icon name="shield" size={20} /></div><div><h4 className={`font-bold text-sm ${baristaMode ? 'text-white' : THEME.textMain}`}>Modo Barista</h4></div></div><button onClick={() => setBaristaMode(!baristaMode)} className={`px-3 py-1 rounded-full text-xs font-bold ${baristaMode ? 'bg-white text-black' : 'bg-zinc-600 text-gray-400'}`}>{baristaMode ? 'ATIVO' : 'OFF'}</button></div></div>
-                                
-                                <div className="text-left mt-6">
-                                    <h3 className={`font-bold text-md ${THEME.textMain} mb-4 flex items-center gap-2`}><Icon name="award" size={18} className="text-yellow-500" /> Conquistas</h3>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {BADGES.map(badge => (
-                                            <div key={badge.id} className={`${THEME.cardBg} p-3 rounded-lg border ${THEME.border} flex items-start gap-3 ${!badge.earned ? 'opacity-50 grayscale' : ''}`}>
-                                                <div className={`p-2 rounded-full ${THEME.bg} ${THEME.accentText}`}><Icon name={badge.iconName} size={16} /></div>
-                                                <div><h4 className={`font-bold text-sm ${THEME.textMain}`}>{badge.name}</h4><p className="text-[10px] text-gray-500 leading-tight mt-1">{badge.desc}</p></div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    );
+                    case 'profile': return <ProfileView user={user} baristaMode={baristaMode} setBaristaMode={setBaristaMode} />;
                     default: return (
                         <div className="p-4 pb-24">
                             <div className={`${THEME.headerBg} rounded-2xl p-5 mb-6 text-white relative overflow-hidden shadow-lg border border-zinc-700`}>
@@ -819,7 +773,7 @@
                     <div className={`${THEME.bg} min-h-screen font-sans transition-colors duration-300 max-w-md mx-auto shadow-2xl overflow-hidden relative border-x border-zinc-800`}>
                         <Header baristaMode={baristaMode} />
                         <main className="min-h-[calc(100vh-140px)]">{renderContent()}</main>
-                        {selectedRecipe && <RecipeDetailModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />}
+                        {selectedRecipe && <RecipeDetailModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} user={user} />}
                         {searchResults && <RecipeSearchResultsModal recipes={searchResults} onClose={() => setSearchResults(null)} onViewDetail={setSelectedRecipe} />}
                         {viewMode !== 'admin' && (
                             <nav className={`fixed bottom-0 w-full max-w-md ${THEME.navBg} border-t ${THEME.border} flex justify-around py-3 pb-5 px-2 z-50 transition-colors duration-300`}>
